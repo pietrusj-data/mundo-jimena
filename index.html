@@ -1093,7 +1093,7 @@ function renderTra(d){
   cv.addEventListener("pointerdown", e=>{
     e.preventDefault(); dibujando = true; ultimo = pos(e);
     dibujados.push(ultimo);
-    cv.setPointerCapture(e.pointerId);
+    try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   });
   cv.addEventListener("pointermove", e=>{
     if(!dibujando || hecho) return;
