@@ -515,15 +515,91 @@ function confeti(x, y, n){
   }
   if(!fxRun){ fxRun = true; requestAnimationFrame(fxTick); }
 }
+/* fuegos artificiales: cohetes que suben y explotan en chispas */
+let cohetes = [], chispas = [];
+function lanzarFuegos(n){
+  for(let i=0;i<n;i++){
+    setTimeout(()=>{
+      cohetes.push({x: fx.width*(0.15+Math.random()*0.7), y: fx.height+10,
+        vy: -(fx.height*0.012 + Math.random()*3),
+        ty: fx.height*(0.16+Math.random()*0.32),
+        c: FX_COLORES[ri(0,FX_COLORES.length-1)]});
+      silbido();
+      if(!fxRun){ fxRun = true; requestAnimationFrame(fxTick); }
+    }, i*380);
+  }
+}
+function explotar(k){
+  explosionSfx();
+  const c2 = FX_COLORES[ri(0,FX_COLORES.length-1)];
+  const n = 54;
+  for(let i=0;i<n;i++){
+    const ang = i*2*Math.PI/n + Math.random()*.25, sp = 2.2+Math.random()*3.6;
+    chispas.push({x:k.x, y:k.y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp,
+      g:.05, a:1, va:.011+Math.random()*.008, r:2+Math.random()*2.2,
+      c: i%2 ? k.c : c2, tw: Math.random()*6.28});
+  }
+}
 function fxTick(){
   fxc.clearRect(0,0,fx.width,fx.height);
   particulas.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.rot+=p.vr; p.a-=.011;
     fxc.save(); fxc.translate(p.x,p.y); fxc.rotate(p.rot); fxc.globalAlpha=Math.max(0,p.a);
     fxc.fillStyle=p.c; fxc.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6); fxc.restore(); });
   particulas = particulas.filter(p=>p.a>0 && p.y<fx.height+30);
-  if(particulas.length){ requestAnimationFrame(fxTick); } else { fxRun=false; fxc.clearRect(0,0,fx.width,fx.height); }
+  cohetes.forEach(k=>{
+    k.y += k.vy;
+    fxc.globalAlpha = .85; fxc.fillStyle = k.c;
+    fxc.fillRect(k.x-2, k.y, 4, 10);
+    fxc.globalAlpha = .3; fxc.fillRect(k.x-1.5, k.y+10, 3, 16);
+  });
+  cohetes = cohetes.filter(k=>{ if(k.y <= k.ty){ explotar(k); return false; } return true; });
+  chispas.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=.985; p.vy*=.985; p.a-=p.va; p.tw+=.3;
+    fxc.globalAlpha = Math.max(0, p.a*(.7+.3*Math.sin(p.tw)));
+    fxc.fillStyle = p.c;
+    fxc.beginPath(); fxc.arc(p.x, p.y, p.r, 0, 7); fxc.fill(); });
+  chispas = chispas.filter(p=>p.a>0 && p.y<fx.height+30);
+  fxc.globalAlpha = 1;
+  if(particulas.length || cohetes.length || chispas.length){ requestAnimationFrame(fxTick); }
+  else { fxRun = false; fxc.clearRect(0,0,fx.width,fx.height); }
 }
 function confetiCentro(){ confeti(innerWidth/2, innerHeight*0.35, 55); }
+/* sonidos de los fuegos */
+let ruidoBuf = null;
+function bufRuido(){
+  const a = audio(); if(!a) return null;
+  if(!ruidoBuf){
+    ruidoBuf = a.createBuffer(1, Math.floor(a.sampleRate*0.6), a.sampleRate);
+    const d = ruidoBuf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  }
+  return ruidoBuf;
+}
+function silbido(){
+  const a = audio(); if(!a || !S.sonido) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(220, a.currentTime);
+  o.frequency.exponentialRampToValueAtTime(1100, a.currentTime+0.4);
+  g.gain.setValueAtTime(.045, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001, a.currentTime+0.42);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime+0.45);
+}
+function explosionSfx(){
+  const a = audio(); if(!a || !S.sonido) return;
+  const b = bufRuido();
+  if(b){
+    const s = a.createBufferSource(); s.buffer = b;
+    const g = a.createGain(), f = a.createBiquadFilter();
+    f.type = "lowpass"; f.frequency.value = 950;
+    g.gain.setValueAtTime(.2, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime+0.5);
+    s.connect(f); f.connect(g); g.connect(a.destination);
+    s.start(); s.stop(a.currentTime+0.55);
+  }
+  tono(85,0,.28,"sine",.18);
+  for(let i=0;i<5;i++) tono(ri(1400,3000), .06+i*.05, .05, "triangle", .045);
+}
 function unicornioVuela(){
   const u = $("unicornio-volador");
   u.style.display = "block";
@@ -746,7 +822,7 @@ let Tanda = null, EjState = null, salirArmado = false;
 function startTanda(cfg){
   Tanda = {origen:cfg.origen, misionId:cfg.misionId||null, titulo:cfg.titulo||"",
     list:cfg.ejercicios, idx:0, res:[], estrellas0:S.estrellas, t0:Date.now(),
-    nivel:cfg.nivel, fallosTotales:0};
+    nivel:cfg.nivel, fallosTotales:0, racha:0};
   go("s-juego");
   renderEj();
 }
@@ -774,10 +850,18 @@ function ejCompletado(){
   guardar(); actualizarEstrellas();
   Tanda.res.push({t:ej.t, d:ej.d, intentos:EjState.intentos, guiada:EjState.guiada,
     seg: Math.round((Date.now()-EjState.t0)/1000)});
-  if(EjState.guiada){
-    hablar("¡Bien! Lo hemos encontrado juntas"); sfx.brillo();
-  } else {
+  if(!EjState.guiada && EjState.intentos===0) Tanda.racha++; else Tanda.racha = 0;
+  if(!EjState.guiada && (Tanda.racha===3 || Tanda.racha===5 || Tanda.racha===7)){
+    premioGrande(`¡${Tanda.racha} SEGUIDAS! 🎆`);
+    hablar(`¡${Tanda.racha} seguidas, ${S.nombre}! ¡Eres una campeona!`);
+    sfx.fanfarria(); confetiCentro(); unicornioVuela();
+    lanzarFuegos(4);
+  } else if(!EjState.guiada){
     elogio();
+    lanzarFuegos(EjState.intentos===0 ? 2 : 1);
+  } else {
+    hablar("¡Bien! Lo hemos encontrado juntas. ¡Mira qué bonito!"); sfx.brillo();
+    lanzarFuegos(1);
   }
   setTimeout(()=>{
     if(!Tanda) return; // salió durante la celebración
@@ -1174,11 +1258,13 @@ function finTanda(){
     `<div class="insig nueva"><div class="em">${ins.e}</div><div class="nom">¡Tesoro nuevo!<br>${ins.nombre}</div></div>`).join("");
   go("s-resumen");
   sfx.fanfarria();
+  lanzarFuegos(Tanda.fallosTotales===0 ? 9 : 6);
   hablar(Tanda.fallosTotales===0
-    ? `¡Perfecto, ${S.nombre}! ¡Lo has hecho todo genial! ¿Explotamos globos?`
+    ? `¡Perfecto, ${S.nombre}! ¡Lo has hecho todo genial! ¡Mira los fuegos artificiales! ¿Explotamos globos?`
     : `¡Muy bien, ${S.nombre}! ¡Terminado! ¿Explotamos globos de premio?`);
   [0,300,700].forEach(t=>setTimeout(confetiCentro, t));
   unicornioVuela();
+  if(nuevas.length) setTimeout(()=>lanzarFuegos(3), 1800);
 }
 
 /* ═══════════ INSIGNIAS Y COFRE ═══════════ */
@@ -1327,7 +1413,7 @@ function endGlobos(abandonado){
     S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + premio;
     premioGrande(`🎈 ¡${Globos.n} globos!`);
     hablar(`¡${Globos.n} globos! ¡Qué puntería tienes, ${S.nombre}!`);
-    sfx.fanfarria(); confetiCentro();
+    sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
   }
   guardar();
   chequearInsignias();
