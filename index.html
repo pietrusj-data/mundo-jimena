@@ -759,6 +759,7 @@ function renderEj(){
   ({num:renderNum, ami:renderAmi, vec:renderVec, sil:renderSil, tra:renderTra})[ej.t](ej.d);
 }
 function ejCompletado(){
+  if(!Tanda) return; // salió de la tanda a mitad
   const ej = Tanda.list[Tanda.idx];
   const est = EjState.guiada ? 1 : EjState.intentos===0 ? 3 : 2;
   S.estrellas += est;
@@ -779,6 +780,7 @@ function ejCompletado(){
     elogio();
   }
   setTimeout(()=>{
+    if(!Tanda) return; // salió durante la celebración
     Tanda.idx++;
     if(Tanda.idx < Tanda.list.length) renderEj();
     else finTanda();
