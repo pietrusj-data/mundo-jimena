@@ -235,8 +235,8 @@ textarea{resize:vertical; min-height:64px;}
     <span class="badge oculto" id="badge-misiones">1</span>
   </div>
   <button class="btn btn-lila btn-grande" id="btn-jugar">🎮 Jugar</button>
-  <button class="btn btn-azul btn-grande" id="btn-globos">🎈 Globos</button>
-  <button class="btn btn-verde btn-grande" id="btn-mariposas">🦋 Mariposas</button>
+  <button class="btn btn-azul btn-grande" id="btn-globos">🎈 Globos <small style="font-size:1.05rem;">(3 ⭐)</small></button>
+  <button class="btn btn-verde btn-grande" id="btn-mariposas">🦋 Mariposas <small style="font-size:1.05rem;">(6 ⭐)</small></button>
   <button class="btn btn-oro btn-grande" id="btn-cofre">🎀 Mi cofre</button>
 </section>
 
@@ -1352,6 +1352,8 @@ function finTanda(){
   $("resumen-ganadas").textContent = ganadas;
   $("resumen-insignias").innerHTML = nuevas.map(ins=>
     `<div class="insig nueva"><div class="em">${ins.e}</div><div class="nom">¡Tesoro nuevo!<br>${ins.nombre}</div></div>`).join("");
+  $("btn-premio-globos").classList.remove("oculto");
+  $("btn-premio-mariposas").classList.remove("oculto");
   go("s-resumen");
   sfx.fanfarria();
   lanzarFuegos(Tanda.fallosTotales===0 ? 9 : 6);
@@ -1453,9 +1455,17 @@ function pintarMisiones(){
 
 /* ═══════════ GLOBOS ═══════════ */
 const Globos = {n:0, t:20, timer:null, spawner:null, rafRun:false, items:[], retorno:"s-home"};
-function startGlobos(){
+function startGlobos(gratis){
+  if(!gratis){
+    if(S.estrellas < 3){
+      hablar("¡Los globos cuestan 3 estrellas! Juega una tanda y las ganas, ¡tú puedes!"); sfx.mal(); return;
+    }
+    S.estrellas -= 3; guardar(); actualizarEstrellas();
+  }
   Globos.retorno = pantallaActual==="s-resumen" ? "s-resumen" : "s-home";
   S.premioGratis = false;
+  $("btn-premio-globos").classList.add("oculto");
+  $("btn-premio-mariposas").classList.add("oculto");
   go("s-globos");
   const zona = $("globos-zona");
   zona.innerHTML = ""; Globos.items = []; Globos.n = 0; Globos.t = 20;
@@ -1533,8 +1543,17 @@ function moverRed(e){
   red.style.left = (Mari.nx-48)+"px"; red.style.top = (Mari.ny-32)+"px";
   red.style.opacity = "1";
 }
-function startMariposas(){
+function startMariposas(gratis){
+  if(!gratis){
+    if(S.estrellas < 6){
+      hablar("¡Las mariposas cuestan 6 estrellas! Son para niñas que se esfuerzan mucho. ¡Juega y las consigues!"); sfx.mal(); return;
+    }
+    S.estrellas -= 6; guardar(); actualizarEstrellas();
+  }
   Mari.retorno = pantallaActual==="s-resumen" ? "s-resumen" : "s-home";
+  S.premioGratis = false;
+  $("btn-premio-globos").classList.add("oculto");
+  $("btn-premio-mariposas").classList.add("oculto");
   go("s-mariposas");
   const zona = $("mariposas-zona");
   zona.innerHTML = "";
@@ -1783,17 +1802,17 @@ $("btn-portada").addEventListener("click", ()=>{
 });
 $("btn-misiones").addEventListener("click", ()=>go("s-misiones"));
 $("btn-jugar").addEventListener("click", ()=>go("s-elegir"));
-$("btn-globos").addEventListener("click", ()=>startGlobos());
+$("btn-globos").addEventListener("click", ()=>startGlobos(false));
 $("btn-cofre").addEventListener("click", ()=>go("s-cofre"));
 $("btn-papa").addEventListener("click", abrirPin);
 $("btn-sonido").addEventListener("click", ()=>{ S.sonido = !S.sonido; guardar(); pintarSonido(); if(S.sonido){ sfx.ok(); hablar("¡Sonido encendido!"); } });
 $("btn-repetir").addEventListener("click", repetir);
 document.querySelectorAll(".btn-volver").forEach(b=>b.addEventListener("click", ()=>go("s-home")));
 $("btn-resumen-volver").addEventListener("click", ()=>go("s-home"));
-$("btn-premio-globos").addEventListener("click", ()=>startGlobos());
+$("btn-premio-globos").addEventListener("click", ()=>startGlobos(true));
 $("btn-salir-globos").addEventListener("click", ()=>endGlobos(true));
-$("btn-mariposas").addEventListener("click", ()=>startMariposas());
-$("btn-premio-mariposas").addEventListener("click", ()=>startMariposas());
+$("btn-mariposas").addEventListener("click", ()=>startMariposas(false));
+$("btn-premio-mariposas").addEventListener("click", ()=>startMariposas(true));
 $("btn-salir-mariposas").addEventListener("click", ()=>endMariposas(true));
 $("btn-salir-juego").addEventListener("click", ()=>{
   if(salirArmado){ salirArmado = false; Tanda = null; try{ speechSynthesis.cancel(); }catch(e){} go("s-home"); }
