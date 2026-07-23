@@ -154,6 +154,9 @@ h2{font-size:1.5rem; margin:.15em 0; text-align:center; font-weight:800;}
   border-radius:30px; overflow:hidden; box-shadow:inset 0 4px 18px rgba(0,0,0,.08);}
 .globo{position:absolute; font-size:4.2rem; cursor:pointer; user-select:none; will-change:transform; line-height:1;}
 .globo span{display:inline-block;}
+.mariposa{position:absolute; cursor:pointer; user-select:none; will-change:transform; line-height:1;}
+.mariposa span{display:inline-block; animation:aleteo .5s ease-in-out infinite;}
+@keyframes aleteo{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.55)}}
 
 /* papá */
 .papa .tarjeta{border-radius:16px;}
@@ -233,6 +236,7 @@ textarea{resize:vertical; min-height:64px;}
   </div>
   <button class="btn btn-lila btn-grande" id="btn-jugar">🎮 Jugar</button>
   <button class="btn btn-azul btn-grande" id="btn-globos">🎈 Globos</button>
+  <button class="btn btn-verde btn-grande" id="btn-mariposas">🦋 Mariposas</button>
   <button class="btn btn-oro btn-grande" id="btn-cofre">🎀 Mi cofre</button>
 </section>
 
@@ -245,14 +249,15 @@ textarea{resize:vertical; min-height:64px;}
   <h2>¿A qué jugamos?</h2>
   <div class="fila">
     <button class="btn btn-rojo"  style="flex:1; min-width:140px; font-size:2rem;" data-juego="num">🔢<br><small style="font-size:1.1rem;">Números</small></button>
+    <button class="btn btn-lila" style="flex:1; min-width:140px; font-size:2rem;" data-juego="fam">🏠<br><small style="font-size:1.1rem;">Familias</small></button>
+  </div>
+  <div class="fila">
     <button class="btn btn-verde" style="flex:1; min-width:140px; font-size:2rem;" data-juego="ami">🤝<br><small style="font-size:1.1rem;">Amigos</small></button>
-  </div>
-  <div class="fila">
     <button class="btn btn-oro"  style="flex:1; min-width:140px; font-size:2rem;" data-juego="vec">🏘️<br><small style="font-size:1.1rem;">Vecinos</small></button>
-    <button class="btn btn-azul" style="flex:1; min-width:140px; font-size:2rem;" data-juego="sil">🔤<br><small style="font-size:1.1rem;">Sílabas</small></button>
   </div>
   <div class="fila">
-    <button class="btn btn-rosa" style="flex:1; min-width:140px; max-width:300px; font-size:2rem;" data-juego="tra">✍️<br><small style="font-size:1.1rem;">Letras</small></button>
+    <button class="btn btn-azul" style="flex:1; min-width:140px; font-size:2rem;" data-juego="sil">🔤<br><small style="font-size:1.1rem;">Sílabas</small></button>
+    <button class="btn btn-rosa" style="flex:1; min-width:140px; font-size:2rem;" data-juego="tra">✍️<br><small style="font-size:1.1rem;">Letras</small></button>
   </div>
 </section>
 
@@ -288,6 +293,7 @@ textarea{resize:vertical; min-height:64px;}
   </div>
   <div id="resumen-insignias" class="fila"></div>
   <button class="btn btn-azul btn-grande" id="btn-premio-globos">🎈 ¡Premio: GLOBOS!</button>
+  <button class="btn btn-verde btn-grande" id="btn-premio-mariposas">🦋 ¡Premio: MARIPOSAS!</button>
   <button class="btn btn-lila" id="btn-resumen-volver">🌈 Volver</button>
 </section>
 
@@ -300,6 +306,17 @@ textarea{resize:vertical; min-height:64px;}
   </div>
   <h2>¡Explota los globos!</h2>
   <div id="globos-zona"></div>
+</section>
+
+<!-- MARIPOSAS -->
+<section class="screen" id="s-mariposas">
+  <div class="topbar">
+    <button class="icono-btn" id="btn-salir-mariposas">✖️</button>
+    <span class="chip">⏱️ <span id="mari-tiempo">20</span></span>
+    <span class="chip">🦋 <span id="mari-cont">0</span></span>
+  </div>
+  <h2>¡Caza las mariposas!</h2>
+  <div id="mariposas-zona" style="position:relative; width:100%; height:62vh; background:linear-gradient(180deg,#e8fbf2,#dff3ff); border-radius:30px; overflow:hidden; box-shadow:inset 0 4px 18px rgba(0,0,0,.08);"></div>
 </section>
 
 <!-- COFRE -->
@@ -347,14 +364,15 @@ textarea{resize:vertical; min-height:64px;}
       <label>Nivel</label>
       <div class="nivel-sel" id="papa-niveles">
         <button class="nivel-btn on" data-n="1">Nivel 1<br><small>hasta 10 · vocales</small></button>
-        <button class="nivel-btn" data-n="2">Nivel 2<br><small>hasta 30 · L M P</small></button>
-        <button class="nivel-btn" data-n="3">Nivel 3<br><small>hasta 50 · +S T, palabras</small></button>
+        <button class="nivel-btn" data-n="2">Nivel 2<br><small>hasta 30 · L M P S</small></button>
+        <button class="nivel-btn" data-n="3">Nivel 3<br><small>hasta 50 · familias al 90 · más letras</small></button>
       </div>
     </div>
     <div class="form-linea">
       <label>Juegos</label>
       <div class="chips" id="papa-tipos">
         <button class="chip-sel on" data-t="num">🔢 Números</button>
+        <button class="chip-sel" data-t="fam">🏠 Familias (10-90)</button>
         <button class="chip-sel on" data-t="ami">🤝 Amigos</button>
         <button class="chip-sel" data-t="vec">🏘️ Vecinos</button>
         <button class="chip-sel on" data-t="sil">🔤 Sílabas</button>
@@ -689,12 +707,13 @@ function barajar(arr){ return arr.slice().sort(()=>Math.random()-.5); }
 /* ═══════════ GENERADORES ═══════════ */
 const EMOJIS_CONTAR = [["🦄","unicornios"],["🌈","arcoíris"],["⭐","estrellas"],["🦋","mariposas"],["🌸","flores"],["🍭","piruletas"],["💖","corazones"],["☁️","nubes"]];
 const VOCALES = ["A","E","I","O","U"];
-const CONS_NIVEL = {2:["L","M","P"], 3:["L","M","P","S","T"]};
-const NOMBRE_LETRA = {L:"ele", M:"eme", P:"pe", S:"ese", T:"te", A:"a", E:"e", I:"i", O:"o", U:"u"};
+const CONS_NIVEL = {2:["L","M","P","S"], 3:["L","M","P","S","T","N","D","F","B"]};
+const NOMBRE_LETRA = {L:"ele", M:"eme", P:"pe", S:"ese", T:"te", N:"ene", D:"de", F:"efe", B:"be", A:"a", E:"e", I:"i", O:"o", U:"u"};
 const PALABRAS = [
   {w:"PATO",e:"🦆"},{w:"SAPO",e:"🐸"},{w:"SETA",e:"🍄"},{w:"MOTO",e:"🛵"},
   {w:"LUNA",e:"🌙"},{w:"SOPA",e:"🍲"},{w:"MAPA",e:"🗺️"},{w:"PELOTA",e:"⚽"},
-  {w:"PATATA",e:"🥔"},{w:"TOMATE",e:"🍅"}
+  {w:"PATATA",e:"🥔"},{w:"TOMATE",e:"🍅"},
+  {w:"NUBE",e:"☁️"},{w:"DADO",e:"🎲"},{w:"FOCA",e:"🦭"},{w:"BOTA",e:"👢"}
 ];
 function silabasDe(w){ return w.match(/[BCDFGJLMNPQRSTVZ]?[AEIOUÁÉÍÓÚ]/g) || [w]; }
 function distractores(correcto, n, min, max){
@@ -772,11 +791,30 @@ function genSil(nivel){
 function genTra(nivel){
   let pool;
   if(nivel===1) pool = VOCALES;
-  else if(nivel===2) pool = conProb(.7) ? ["L","M","P","T"] : VOCALES;
-  else pool = conProb(.75) ? ["L","M","P","T","S"] : VOCALES;
+  else if(nivel===2) pool = conProb(.7) ? ["L","M","P","S","T"] : VOCALES;
+  else pool = conProb(.75) ? ["L","M","P","S","T","N","D","F","B"] : VOCALES;
   return {t:"tra", d:{letra: pool[ri(0,pool.length-1)]}};
 }
-const GEN = {num:genNum, ami:genAmi, vec:genVec, sil:genSil, tra:genTra};
+function genFam(nivel){
+  const maxDec = nivel===1 ? 4 : nivel===2 ? 7 : 9; // familias del 10 al 40/70/90
+  const dec = ri(1,maxDec)*10;
+  if(conProb(.5)){ // ¿de qué familia es el 47?
+    const n = dec + ri(0,9);
+    const s = new Set([dec]);
+    while(s.size<3) s.add(ri(1,maxDec)*10);
+    return {t:"fam", d:{sub:"de", n, fam:dec, ops:barajar([...s])}};
+  }
+  // toca a todos los de la familia del 30
+  const buenos = new Set();
+  while(buenos.size<3) buenos.add(dec + ri(0,9));
+  const malos = new Set();
+  while(malos.size<3){
+    const d2 = ri(1,Math.min(9,maxDec))*10;
+    if(d2!==dec) malos.add(d2 + ri(0,9));
+  }
+  return {t:"fam", d:{sub:"toca", fam:dec, buenos:[...buenos], todos:barajar([...buenos, ...malos])}};
+}
+const GEN = {num:genNum, ami:genAmi, vec:genVec, fam:genFam, sil:genSil, tra:genTra};
 function genTanda(tipos, nivel, n){
   const lista = [], vistos = new Set();
   const orden = [];
@@ -790,8 +828,8 @@ function genTanda(tipos, nivel, n){
   }
   return lista;
 }
-const EMOJI_TIPO = {num:"🔢", ami:"🤝", vec:"🏘️", sil:"🔤", tra:"✍️"};
-const NOMBRE_JUEGO = {num:"Números", ami:"Amigos", vec:"Vecinos", sil:"Sílabas", tra:"Letras"};
+const EMOJI_TIPO = {num:"🔢", ami:"🤝", vec:"🏘️", fam:"🏠", sil:"🔤", tra:"✍️"};
+const NOMBRE_JUEGO = {num:"Números", ami:"Amigos", vec:"Vecinos", fam:"Familias", sil:"Sílabas", tra:"Letras"};
 function tituloEj(ej){
   const d = ej.d;
   if(ej.t==="num"){
@@ -801,6 +839,7 @@ function tituloEj(ej){
   }
   if(ej.t==="ami") return `El ${d.x} y su amigo del ${d.total}`;
   if(ej.t==="vec") return `Vecinos del ${d.n}`;
+  if(ej.t==="fam") return d.sub==="de" ? `¿De qué familia es el ${d.n}?` : `Tocar la familia del ${d.fam}`;
   if(ej.t==="sil"){
     if(d.sub==="junta") return `Pronunciar: ${d.c ? d.c+d.v : d.v+" (vocal)"}`;
     if(d.sub==="busca") return `¿Dónde dice ${d.obj}?`;
@@ -813,6 +852,7 @@ function respuestaEj(ej){
   if(ej.t==="num") return d.sub==="contar" ? d.n : d.sub==="busca" ? d.n : d.serie[d.hueco];
   if(ej.t==="ami") return d.total-d.x;
   if(ej.t==="vec") return `${d.n-1} y ${d.n+1}`;
+  if(ej.t==="fam") return d.sub==="de" ? "la del "+d.fam : d.buenos.join(", ");
   if(ej.t==="sil") return d.sub==="junta" ? "repetir en voz alta" : d.sub==="busca" ? d.obj : d.w;
   return d.letra;
 }
@@ -832,7 +872,7 @@ function renderEj(){
   $("prog-fill").style.width = Math.round(100*Tanda.idx/Tanda.list.length)+"%";
   const z = $("zona-ejercicio"); z.innerHTML = "";
   EjState = {intentos:0, guiada:false, t0:Date.now()};
-  ({num:renderNum, ami:renderAmi, vec:renderVec, sil:renderSil, tra:renderTra})[ej.t](ej.d);
+  ({num:renderNum, ami:renderAmi, vec:renderVec, fam:renderFam, sil:renderSil, tra:renderTra})[ej.t](ej.d);
 }
 function ejCompletado(){
   if(!Tanda) return; // salió de la tanda a mitad
@@ -844,6 +884,7 @@ function ejCompletado(){
     if(ej.t==="num") S.stats.numOk++;
     if(ej.t==="ami") S.stats.amiOk++;
     if(ej.t==="vec") S.stats.vecOk++;
+    if(ej.t==="fam") S.stats.famOk = (S.stats.famOk||0)+1;
     if(ej.t==="sil") S.stats.silOk++;
     if(ej.t==="tra") S.stats.traOk++;
   }
@@ -1024,6 +1065,57 @@ function renderVec(d){
   decir();
 }
 
+/* ═══════════ RENDER: FAMILIAS ═══════════ */
+function renderFam(d){
+  const z = $("zona-ejercicio");
+  if(d.sub==="de"){
+    ponEnunciado(z, "🏠 ¿De qué familia es?");
+    const big = document.createElement("div");
+    big.style.cssText = "font-size:4.2rem; font-weight:800; color:var(--lila-osc);";
+    big.textContent = d.n;
+    z.appendChild(big);
+    const decir = ()=>hablar(`El ${d.n}… ¿de qué familia es? ¿De la familia del ${d.ops[0]}, la del ${d.ops[1]} o la del ${d.ops[2]}?`);
+    pintarOpciones(z, d.ops.map(v=>`<small style="font-size:.95rem;">familia del</small>&nbsp;${v}`), d.ops.indexOf(d.fam), decir);
+    decir();
+    return;
+  }
+  ponEnunciado(z, `🏠 La familia del ${d.fam}`);
+  const decir = ()=>hablar(`¡Toca a todos los de la familia del ${d.fam}! Van del ${d.fam} al ${d.fam+9}.`);
+  const cont = document.createElement("div"); cont.className = "opciones";
+  let encontrados = 0;
+  const botones = [];
+  d.todos.forEach(v=>{
+    const b = document.createElement("div");
+    b.className = "opcion"; b.style.fontSize = "2.2rem";
+    b.textContent = v;
+    const esBueno = d.buenos.includes(v);
+    b.addEventListener("pointerdown", e=>{
+      e.preventDefault();
+      if(b.classList.contains("apagada")||b.classList.contains("bien")) return;
+      if(esBueno){
+        b.classList.add("bien");
+        encontrados++; sfx.brillo();
+        hablar(`¡El ${v}!`);
+        if(encontrados===d.buenos.length) setTimeout(ejCompletado, 400);
+      } else {
+        b.classList.add("mal"); setTimeout(()=>b.classList.remove("mal"),600);
+        EjState.intentos++; Tanda.fallosTotales++;
+        if(EjState.intentos>=2 && !EjState.guiada){
+          EjState.guiada = true;
+          botones.forEach(([bb,vv])=>{
+            if(!d.buenos.includes(vv)) bb.classList.add("apagada");
+            else if(!bb.classList.contains("bien")) bb.classList.add("pista");
+          });
+          hablar("Mira, son estos. ¡Tócalos!");
+        } else if(!EjState.guiada){ animo(); setTimeout(decir, 1300); }
+      }
+    });
+    cont.appendChild(b); botones.push([b,v]);
+  });
+  z.appendChild(cont);
+  decir();
+}
+
 /* ═══════════ RENDER: SÍLABAS ═══════════ */
 let mediaStream = null, mediaRec = null;
 async function grabarYReproducir(btn){
@@ -1128,7 +1220,11 @@ const LETRAS_TRAZO = {
   M:[[[14,90],[14,10],[50,62],[86,10],[86,90]]],
   P:[[[26,90],[26,10]],[[26,14],[52,10],[70,20],[74,32],[70,44],[52,52],[26,54]]],
   S:[[[76,18],[58,8],[38,10],[26,22],[28,36],[42,46],[58,52],[72,60],[76,74],[66,86],[46,92],[26,84]]],
-  T:[[[14,10],[86,10]],[[50,10],[50,90]]]
+  T:[[[14,10],[86,10]],[[50,10],[50,90]]],
+  N:[[[16,90],[16,10],[84,90],[84,10]]],
+  D:[[[26,90],[26,10]],[[26,12],[54,14],[72,30],[76,50],[72,70],[54,86],[26,88]]],
+  F:[[[26,90],[26,10],[78,10]],[[26,50],[66,50]]],
+  B:[[[26,90],[26,10]],[[26,12],[52,10],[64,20],[64,30],[52,40],[26,42]],[[26,44],[56,44],[70,54],[70,72],[56,86],[26,88]]]
 };
 function muestrearTrazos(trazos, paso){
   const pts = [];
@@ -1277,6 +1373,8 @@ const INSIGNIAS = [
   {k:"vec-10",         nombre:"Buena Vecina",       e:"🏘️", desc:"10 vecinos encontrados",     check:s=>s.vecOk>=10},
   {k:"sil-10",         nombre:"Cantarina",          e:"🔤", desc:"10 sílabas dichas",          check:s=>s.silOk>=10},
   {k:"tra-10",         nombre:"Artista de Letras",  e:"✍️", desc:"10 letras dibujadas",        check:s=>s.traOk>=10},
+  {k:"fam-10",         nombre:"Familia Numerosa",   e:"🏠", desc:"10 familias acertadas",      check:s=>(s.famOk||0)>=10},
+  {k:"mari-25",        nombre:"Cazamariposas",      e:"🦋", desc:"Caza 25 mariposas",          check:s=>(s.mariposas||0)>=25},
   {k:"dias-3",         nombre:"Tres Días Jugando",  e:"📅", desc:"Juega 3 días distintos",     check:s=>s.dias.length>=3},
   {k:"estrellas-50",   nombre:"Lluvia de Estrellas",e:"⭐", desc:"Gana 50 estrellas",          check:s=>(s.estrellasTotal||0)>=50}
 ];
@@ -1419,6 +1517,114 @@ function endGlobos(abandonado){
   chequearInsignias();
   setTimeout(()=>go(Globos.retorno==="s-resumen" ? "s-resumen" : "s-home"), abandonado ? 0 : 1700);
 }
+
+/* ═══════════ CAZAMARIPOSAS 🦋 (con red de verdad) ═══════════ */
+const Mari = {n:0, t:20, timer:null, rafRun:false, items:[], retorno:"s-home", activo:false, nx:-999, ny:-999, tPrev:0};
+const RED_SVG = `<svg viewBox="0 0 90 135" width="96" height="144" style="display:block;">
+  <line x1="45" y1="52" x2="45" y2="128" stroke="#c98a4b" stroke-width="9" stroke-linecap="round"/>
+  <ellipse cx="45" cy="30" rx="33" ry="25" fill="rgba(255,255,255,.28)" stroke="#8b6fe0" stroke-width="6"/>
+  <path d="M18,22 Q45,40 72,22 M18,38 Q45,56 72,38 M32,10 Q40,30 32,50 M58,10 Q50,30 58,50" stroke="#b9a6ee" stroke-width="2.5" fill="none"/>
+</svg>`;
+function moverRed(e){
+  const zona = $("mariposas-zona"), red = $("red-mari");
+  if(!red) return;
+  const r = zona.getBoundingClientRect();
+  Mari.nx = e.clientX - r.left; Mari.ny = e.clientY - r.top;
+  red.style.left = (Mari.nx-48)+"px"; red.style.top = (Mari.ny-32)+"px";
+  red.style.opacity = "1";
+}
+function startMariposas(){
+  Mari.retorno = pantallaActual==="s-resumen" ? "s-resumen" : "s-home";
+  go("s-mariposas");
+  const zona = $("mariposas-zona");
+  zona.innerHTML = "";
+  const red = document.createElement("div");
+  red.id = "red-mari"; red.innerHTML = RED_SVG;
+  red.style.cssText = "position:absolute; pointer-events:none; z-index:5; opacity:0; transform-origin:45px 30px;";
+  zona.appendChild(red);
+  Mari.items = []; Mari.n = 0; Mari.t = 20; Mari.activo = false; Mari.nx = -999; Mari.ny = -999;
+  $("mari-cont").textContent = "0"; $("mari-tiempo").textContent = "20";
+  hablar("¡Caza las mariposas con tu red! Arrastra el dedo por el jardín.");
+  for(let i=0;i<5;i++) crearMariposa(zona);
+  if(!zona.dataset.cableada){
+    zona.dataset.cableada = "1";
+    zona.addEventListener("pointerdown", e=>{
+      e.preventDefault(); Mari.activo = true; moverRed(e);
+      const red2 = $("red-mari");
+      if(red2 && red2.animate) red2.animate(
+        [{transform:"rotate(-20deg)"},{transform:"rotate(12deg)"},{transform:"rotate(0deg)"}], {duration:240});
+    });
+    zona.addEventListener("pointermove", e=>{ if(Mari.activo){ e.preventDefault(); moverRed(e); } });
+  }
+  Mari.timer = setInterval(()=>{
+    Mari.t--; $("mari-tiempo").textContent = Mari.t;
+    if(Mari.t<=0) endMariposas(false);
+  }, 1000);
+  Mari.tPrev = 0;
+  if(!Mari.rafRun){ Mari.rafRun = true; requestAnimationFrame(mariTick); }
+}
+function crearMariposa(zona){
+  const m = document.createElement("div");
+  m.className = "mariposa";
+  m.style.pointerEvents = "none"; // caza la red, no el dedo directo
+  m.innerHTML = `<span style="filter:hue-rotate(${ri(0,340)}deg); font-size:${ri(26,40)/10}rem;">🦋</span>`;
+  const st = {el:m,
+    x: ri(20, Math.max(60, zona.clientWidth-60)),
+    y: ri(20, Math.max(60, zona.clientHeight-70)),
+    ang: Math.random()*6.28, v: ri(55,115), wob: 1.5+Math.random()*2.5, fase: Math.random()*6.28};
+  m.style.transform = `translate(${st.x}px, ${st.y}px)`;
+  zona.appendChild(m);
+  Mari.items.push(st);
+}
+function mariTick(ts){
+  if(pantallaActual!=="s-mariposas"){ Mari.rafRun = false; return; }
+  const dt = Mari.tPrev ? Math.min((ts-Mari.tPrev)/1000, .05) : .016;
+  Mari.tPrev = ts;
+  const zona = $("mariposas-zona");
+  const W = zona.clientWidth, H = zona.clientHeight;
+  Mari.items.forEach(st=>{
+    st.ang += Math.sin(ts/1000*st.wob + st.fase)*2.2*dt;
+    st.x += Math.cos(st.ang)*st.v*dt;
+    st.y += Math.sin(st.ang)*st.v*dt*0.75;
+    if(st.x<6){ st.x=6; st.ang = Math.PI-st.ang; }
+    if(st.x>W-48){ st.x=W-48; st.ang = Math.PI-st.ang; }
+    if(st.y<6){ st.y=6; st.ang = -st.ang; }
+    if(st.y>H-52){ st.y=H-52; st.ang = -st.ang; }
+    st.el.style.transform = `translate(${st.x}px, ${st.y}px)`;
+  });
+  if(Mari.activo && Mari.timer){
+    const rz = zona.getBoundingClientRect();
+    Mari.items = Mari.items.filter(st=>{
+      const cx = st.x+22, cy = st.y+20;
+      if(Math.abs(cx-Mari.nx)<48 && Math.abs(cy-Mari.ny)<44){
+        Mari.n++; $("mari-cont").textContent = Mari.n;
+        sfx.pop(); sfx.brillo();
+        confeti(rz.left+cx, rz.top+cy, 14);
+        st.el.innerHTML = "✨"; setTimeout(()=>st.el.remove(), 220);
+        setTimeout(()=>{ if(pantallaActual==="s-mariposas" && Mari.timer) crearMariposa(zona); }, 520);
+        return false;
+      }
+      return true;
+    });
+  }
+  requestAnimationFrame(mariTick);
+}
+function endMariposas(abandonado){
+  clearInterval(Mari.timer); Mari.timer = null;
+  S.stats.mariposas = (S.stats.mariposas||0) + Mari.n;
+  if(!abandonado){
+    const premio = Math.max(1, Math.ceil(Mari.n/2));
+    S.estrellas += premio;
+    S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + premio;
+    premioGrande(`🦋 ¡${Mari.n} mariposas!`);
+    hablar(`¡Has cazado ${Mari.n} mariposas con tu red, ${S.nombre}! ¡Qué rápida!`);
+    sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
+  }
+  guardar();
+  chequearInsignias();
+  setTimeout(()=>go(Mari.retorno==="s-resumen" ? "s-resumen" : "s-home"), abandonado ? 0 : 1700);
+}
+addEventListener("pointerup", ()=>Mari.activo = false);
 
 /* ═══════════ ZONA PAPÁ ═══════════ */
 const Papa = {pinBuf:"", pinModo:"entrar", pinTemp:"", nivel:1, tipos:new Set(["num","ami","sil"]), preview:null};
@@ -1586,6 +1792,9 @@ document.querySelectorAll(".btn-volver").forEach(b=>b.addEventListener("click", 
 $("btn-resumen-volver").addEventListener("click", ()=>go("s-home"));
 $("btn-premio-globos").addEventListener("click", ()=>startGlobos());
 $("btn-salir-globos").addEventListener("click", ()=>endGlobos(true));
+$("btn-mariposas").addEventListener("click", ()=>startMariposas());
+$("btn-premio-mariposas").addEventListener("click", ()=>startMariposas());
+$("btn-salir-mariposas").addEventListener("click", ()=>endMariposas(true));
 $("btn-salir-juego").addEventListener("click", ()=>{
   if(salirArmado){ salirArmado = false; Tanda = null; try{ speechSynthesis.cancel(); }catch(e){} go("s-home"); }
   else { salirArmado = true; hablar("¿Quieres salir? Toca otra vez la equis"); setTimeout(()=>salirArmado=false, 2600); }
