@@ -877,7 +877,7 @@ function renderEj(){
 function ejCompletado(){
   if(!Tanda) return; // salió de la tanda a mitad
   const ej = Tanda.list[Tanda.idx];
-  const est = EjState.guiada ? 1 : EjState.intentos===0 ? 3 : 2;
+  const est = EjState.guiada ? 0 : 1; // 1 estrella por ejercicio bien hecho, sin más
   S.estrellas += est;
   S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + est;
   if(!EjState.guiada){
@@ -1319,9 +1319,6 @@ function renderTra(d){
 function hoyISO(){ return new Date().toISOString().slice(0,10); }
 function finTanda(){
   const seg = Math.round((Date.now()-Tanda.t0)/1000);
-  const bonus = 5;
-  S.estrellas += bonus;
-  S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + bonus;
   const ganadas = S.estrellas - Tanda.estrellas0;
   const aciertos = Tanda.res.filter(r=>!r.guiada).length;
   if(!S.stats.dias.includes(hoyISO())){ S.stats.dias.push(hoyISO()); S.stats.dias = S.stats.dias.slice(-90); }
@@ -1516,9 +1513,6 @@ function endGlobos(abandonado){
   Globos.timer = Globos.spawner = null;
   S.stats.globos += Globos.n;
   if(!abandonado){
-    const premio = Math.max(1, Math.ceil(Globos.n/3));
-    S.estrellas += premio;
-    S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + premio;
     premioGrande(`🎈 ¡${Globos.n} globos!`);
     hablar(`¡${Globos.n} globos! ¡Qué puntería tienes, ${S.nombre}!`);
     sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
@@ -1632,9 +1626,6 @@ function endMariposas(abandonado){
   clearInterval(Mari.timer); Mari.timer = null;
   S.stats.mariposas = (S.stats.mariposas||0) + Mari.n;
   if(!abandonado){
-    const premio = Math.max(1, Math.ceil(Mari.n/2));
-    S.estrellas += premio;
-    S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + premio;
     premioGrande(`🦋 ¡${Mari.n} mariposas!`);
     hablar(`¡Has cazado ${Mari.n} mariposas con tu red, ${S.nombre}! ¡Qué rápida!`);
     sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
@@ -1866,6 +1857,12 @@ document.addEventListener("pointerdown", function una(){ audio(); document.remov
 if(window.speechSynthesis) speechSynthesis.getVoices();
 
 /* INIT */
+/* economía v2 (jul-2026): borrón y cuenta nueva — las estrellas infladas de la economía vieja se resetean una vez */
+if(!LS.get("econV2", false)){
+  S.estrellas = 0;
+  LS.set("econV2", true);
+  guardar();
+}
 pintarSonido();
 actualizarEstrellas();
 pintarHome();
