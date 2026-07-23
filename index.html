@@ -877,7 +877,7 @@ function renderEj(){
 function ejCompletado(){
   if(!Tanda) return; // salió de la tanda a mitad
   const ej = Tanda.list[Tanda.idx];
-  const est = EjState.guiada ? 0 : 1; // 1 estrella por ejercicio bien hecho, sin más
+  const est = 1; // 1 estrella por ejercicio terminado — con ayuda de Nube también cuenta: lo importante es llegar
   S.estrellas += est;
   S.stats.estrellasTotal = (S.stats.estrellasTotal||0) + est;
   if(!EjState.guiada){
