@@ -116,6 +116,16 @@ h2{font-size:1.5rem; margin:.15em 0; text-align:center; font-weight:800;}
   box-shadow:0 10px 26px rgba(125,168,250,.25); touch-action:none;}
 #trazo-canvas{border-radius:30px; display:block; touch-action:none;}
 
+/* tabla del 100 */
+.tabla100{display:grid; grid-template-columns:repeat(10,1fr); gap:3px; width:100%; max-width:540px;
+  background:var(--blanco); padding:8px; border-radius:18px; box-shadow:0 6px 18px rgba(125,168,250,.2);}
+.t100{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-weight:800;
+  font-size:clamp(.68rem,2.3vw,.98rem); background:#f6f9ff; border-radius:6px; color:var(--tinta);}
+.t100.cero{opacity:.35;}
+.t100.hueco{background:var(--lila-suave); border:2px dashed var(--lila);}
+.t100.activo{border:2px solid var(--rosa); background:#fff0f7; animation:latido 1.1s infinite;}
+.t100.ok{background:#e9fcf6; border:2px solid var(--verde-osc);}
+
 /* mascota */
 #nube{position:fixed; left:10px; bottom:10px; z-index:50; display:flex; align-items:flex-end; gap:6px; pointer-events:none;}
 #nube .avatar{font-size:3.4rem; filter:drop-shadow(0 3px 6px rgba(0,0,0,.15)); transform:scaleX(-1);}
@@ -366,7 +376,8 @@ textarea{resize:vertical; min-height:64px;}
       <div class="nivel-sel" id="papa-niveles">
         <button class="nivel-btn on" data-n="1">Nivel 1<br><small>hasta 10 · vocales</small></button>
         <button class="nivel-btn" data-n="2">Nivel 2<br><small>hasta 30 · L M P S</small></button>
-        <button class="nivel-btn" data-n="3">Nivel 3<br><small>hasta 50 · familias al 90 · más letras</small></button>
+        <button class="nivel-btn" data-n="3">Nivel 3<br><small>hasta 50 · familias · más letras</small></button>
+        <button class="nivel-btn" data-n="4">Reto 🌟<br><small>hasta 99 · saltos · inversas · números</small></button>
       </div>
     </div>
     <div class="form-linea">
@@ -418,7 +429,9 @@ textarea{resize:vertical; min-height:64px;}
         <button class="nivel-btn on" data-n="1">Nivel 1</button>
         <button class="nivel-btn" data-n="2">Nivel 2</button>
         <button class="nivel-btn" data-n="3">Nivel 3</button>
+        <button class="nivel-btn" data-n="4">Reto 🌟</button>
       </div>
+      <p class="sub" style="text-align:left; font-size:.85rem;">El juego libre se ajusta solo: si encadena aciertos a la primera sube un puntito, y si Nube la ayuda mucho, baja. Las misiones van SIEMPRE al nivel que tú elijas.</p>
     </div>
     <div class="form-linea">
       <label>Cambiar PIN</label>
@@ -463,6 +476,7 @@ const S = {
   nivelLibre: LS.get("nivelLibre", 1),
   insig  : LS.get("insig", []),
   hoy    : LS.get("hoy", {fecha:"", estrellas:0, ej:0}),
+  chispa : LS.get("chispa", {}),   // maestría por juego (0-10) para el nivel automático del juego libre
   stats  : LS.get("stats", {misiones:0, perfectas:0, numOk:0, amiOk:0, vecOk:0, silOk:0, traOk:0, globos:0, dias:[], estrellasTotal:0}),
   cola   : LS.get("cola", []),
   hechasLocal: LS.get("hechasLocal", []),
@@ -472,7 +486,7 @@ function guardar(){
   LS.set("nombre",S.nombre); LS.set("estrellas",S.estrellas); LS.set("sonido",S.sonido);
   LS.set("pin",S.pin); LS.set("nivelLibre",S.nivelLibre); LS.set("insig",S.insig);
   LS.set("stats",S.stats); LS.set("cola",S.cola); LS.set("hechasLocal",S.hechasLocal);
-  LS.set("hoy",S.hoy);
+  LS.set("hoy",S.hoy); LS.set("chispa",S.chispa);
 }
 function tocaHoy(){
   const f = new Date().toISOString().slice(0,10);
@@ -715,7 +729,9 @@ function barajar(arr){ return arr.slice().sort(()=>Math.random()-.5); }
 const EMOJIS_CONTAR = [["🦄","unicornios"],["🌈","arcoíris"],["⭐","estrellas"],["🦋","mariposas"],["🌸","flores"],["🍭","piruletas"],["💖","corazones"],["☁️","nubes"]];
 const VOCALES = ["A","E","I","O","U"];
 const CONS_NIVEL = {2:["L","M","P","S"], 3:["L","M","P","S","T","N","D","F","B"]};
-const NOMBRE_LETRA = {L:"ele", M:"eme", P:"pe", S:"ese", T:"te", N:"ene", D:"de", F:"efe", B:"be", A:"a", E:"e", I:"i", O:"o", U:"u"};
+const NOMBRE_LETRA = {L:"ele", M:"eme", P:"pe", S:"ese", T:"te", N:"ene", D:"de", F:"efe", B:"be",
+  J:"jota", V:"uve", Z:"zeta", C:"ce", R:"erre", A:"a", E:"e", I:"i", O:"o", U:"u",
+  "0":"cero","1":"uno","2":"dos","3":"tres","4":"cuatro","5":"cinco","6":"seis","7":"siete","8":"ocho","9":"nueve"};
 const PALABRAS = [
   {w:"PATO",e:"🦆"},{w:"SAPO",e:"🐸"},{w:"SETA",e:"🍄"},{w:"MOTO",e:"🛵"},
   {w:"LUNA",e:"🌙"},{w:"SOPA",e:"🍲"},{w:"MAPA",e:"🗺️"},{w:"PELOTA",e:"⚽"},
@@ -739,8 +755,8 @@ function distractores(correcto, n, min, max){
 }
 function genNum(nivel){
   const r = Math.random();
-  const maxN = nivel===1?10 : nivel===2?30 : 50;
-  if(r<.4){
+  const maxN = nivel===1?10 : nivel===2?30 : nivel===3?50 : 99;
+  if(r<.4 && nivel<4){
     const n = nivel===1?ri(1,6) : nivel===2?ri(3,12) : ri(6,20);
     const em = EMOJIS_CONTAR[ri(0,EMOJIS_CONTAR.length-1)];
     return {t:"num", d:{sub:"contar", n, emoji:em[0], nombre:em[1], ops:distractores(n,2,1,Math.max(n+3,6))}};
@@ -749,30 +765,62 @@ function genNum(nivel){
     const n = ri(1,maxN);
     return {t:"num", d:{sub:"busca", n, ops:distractores(n,3,1,maxN)}};
   }
-  const ini = ri(1, maxN-4);
-  const serie = [ini, ini+1, ini+2, ini+3];
+  // serie con hueco; en Reto: a saltos de 2/5/10 y a veces hacia atrás
+  let paso = 1, alReves = false;
+  if(nivel>=4){ paso = [1,2,5,10][ri(0,3)]; alReves = conProb(.4); }
+  const ini = ri(1, Math.max(1, maxN - 3*paso));
+  let serie = [ini, ini+paso, ini+2*paso, ini+3*paso];
+  if(alReves) serie = serie.slice().reverse();
   const hueco = ri(1,2);
-  return {t:"num", d:{sub:"falta", serie, hueco, ops:distractores(serie[hueco],2,1,maxN)}};
+  return {t:"num", d:{sub:"falta", serie, hueco, ops:distractores(serie[hueco],2,1,99)}};
 }
 function genAmi(nivel){
+  if(nivel>=4){
+    if(conProb(.4)){ // al revés: ¿de quién son amigos el 7 y el 3?
+      const total = [5,10,20][ri(0,2)];
+      const x = ri(1,total-1);
+      return {t:"ami", d:{sub:"inverso", x, y:total-x, ops:barajar([5,10,20])}};
+    }
+    const x = ri(1,19); // amigos del 20
+    return {t:"ami", d:{total:20, x, marco:false, ops:distractores(20-x,2,0,20)}};
+  }
   const total = nivel===1 ? 5 : 10;
   const x = nivel===1 ? ri(0,5) : ri(1,9);
   const marco = nivel<3 ? true : conProb(.4);
   return {t:"ami", d:{total, x, marco, ops:distractores(total-x,2,0,total)}};
 }
 function genVec(nivel){
-  const n = nivel===1?ri(2,8) : nivel===2?ri(11,29) : ri(21,48);
+  const n = nivel===1?ri(2,8) : nivel===2?ri(11,29) : nivel===3?ri(21,48)
+          : (conProb(.4) ? ri(3,9)*10 : ri(31,89)); // Reto: a veces vecinos de decena (39-40-41)
   const s = new Set([n-1, n+1]);
   let guard = 0;
   while(s.size<4 && guard++<50){
     const d = n + [-3,-2,2,3,10,-10][ri(0,5)];
-    if(d>=0 && d<=50 && d!==n) s.add(d);
+    if(d>=0 && d<=99 && d!==n) s.add(d);
   }
-  while(s.size<4) s.add(ri(0,50));
+  while(s.size<4) s.add(ri(0,99));
   return {t:"vec", d:{n, chips:barajar([...s])}};
 }
 function genSil(nivel){
   const r = Math.random();
+  if(nivel>=4){ // Reto: inversas (AL, ES...), palabras de 3 sílabas y mezclas
+    const c = CONS_NIVEL[3][ri(0,CONS_NIVEL[3].length-1)], v = VOCALES[ri(0,4)];
+    if(r<.25) return {t:"sil", d:{sub:"junta", c, v, inversa:true}};
+    if(r<.5){
+      const obj = v+c;
+      const ops = barajar(barajar(VOCALES.filter(x=>x!==v)).slice(0,2).map(x=>x+c).concat([obj]));
+      return {t:"sil", d:{sub:"busca", obj, ops}};
+    }
+    if(r<.8){
+      const tres = PALABRAS.filter(p=>silabasDe(p.w).length===3);
+      const p = conProb(.7) ? tres[ri(0,tres.length-1)] : PALABRAS[ri(0,PALABRAS.length-1)];
+      const otras = barajar(PALABRAS.filter(x=>x.w!==p.w)).slice(0,2).map(x=>x.w);
+      return {t:"sil", d:{sub:"palabra", w:p.w, emoji:p.e, sils:silabasDe(p.w), ops:barajar([p.w,...otras])}};
+    }
+    const obj2 = c+v;
+    const ops2 = barajar(barajar(CONS_NIVEL[3].filter(x=>x!==c)).slice(0,2).map(x=>x+v).concat([obj2]));
+    return {t:"sil", d:{sub:"busca", obj:obj2, ops:ops2}};
+  }
   if(nivel===1){
     const v = VOCALES[ri(0,4)];
     if(r<.5) return {t:"sil", d:{sub:"junta", c:null, v}};
@@ -799,12 +847,31 @@ function genTra(nivel){
   let pool;
   if(nivel===1) pool = VOCALES;
   else if(nivel===2) pool = conProb(.7) ? ["L","M","P","S","T"] : VOCALES;
-  else pool = conProb(.75) ? ["L","M","P","S","T","N","D","F","B"] : VOCALES;
+  else if(nivel===3) pool = conProb(.75) ? ["L","M","P","S","T","N","D","F","B"] : VOCALES;
+  else pool = conProb(.55) ? ["J","V","Z","C","R"] : ["0","1","2","3","4","5","6","7","8","9"];
   return {t:"tra", d:{letra: pool[ri(0,pool.length-1)]}};
 }
 function genFam(nivel){
   const maxDec = nivel===1 ? 4 : nivel===2 ? 7 : 9; // familias del 10 al 40/70/90
   const dec = ri(1,maxDec)*10;
+  const r = Math.random();
+  if(nivel>=2 && r<.3){ // completa la familia: fila con 3-4 huecos y fichas abajo
+    const faltan = new Set();
+    while(faltan.size < ri(3,4)) faltan.add(dec + ri(0,9));
+    const intrusos = new Set();
+    while(intrusos.size<2){
+      const d2 = ri(1,maxDec)*10;
+      if(d2!==dec) intrusos.add(d2 + ri(0,9));
+    }
+    return {t:"fam", d:{sub:"completa", fam:dec, faltan:[...faltan].sort((a,b)=>a-b),
+      chips: barajar([...faltan, ...intrusos])}};
+  }
+  if(nivel>=3 && r<(nivel>=4?.6:.5)){ // la tabla del 1 al 99 con huecos en 3 familias
+    const decs = barajar([1,2,3,4,5,6,7,8,9]).slice(0,3);
+    const huecos = new Set();
+    decs.forEach(dd=>{ const n = ri(3,4); let g = 0; while(g<n){ const v = dd*10+ri(0,9); if(!huecos.has(v)){ huecos.add(v); g++; } } });
+    return {t:"fam", d:{sub:"tabla", huecos:[...huecos].sort((a,b)=>a-b)}};
+  }
   if(conProb(.5)){ // ¿de qué familia es el 47?
     const n = dec + ri(0,9);
     const s = new Set([dec]);
@@ -846,20 +913,30 @@ function tituloEj(ej){
   }
   if(ej.t==="ami") return `El ${d.x} y su amigo del ${d.total}`;
   if(ej.t==="vec") return `Vecinos del ${d.n}`;
-  if(ej.t==="fam") return d.sub==="de" ? `¿De qué familia es el ${d.n}?` : `Tocar la familia del ${d.fam}`;
+  if(ej.t==="fam"){
+    if(d.sub==="de") return `¿De qué familia es el ${d.n}?`;
+    if(d.sub==="toca") return `Tocar la familia del ${d.fam}`;
+    if(d.sub==="completa") return `Completar la familia del ${d.fam}`;
+    return `La tabla del 1 al 99 · ${d.huecos.length} huecos`;
+  }
   if(ej.t==="sil"){
     if(d.sub==="junta") return `Pronunciar: ${d.c ? d.c+d.v : d.v+" (vocal)"}`;
     if(d.sub==="busca") return `¿Dónde dice ${d.obj}?`;
     return `Palabra: ${d.w} ${d.emoji}`;
   }
-  return `Trazar la letra ${d.letra}`;
+  return /^\d$/.test(d.letra) ? `Trazar el número ${d.letra}` : `Trazar la letra ${d.letra}`;
 }
 function respuestaEj(ej){
   const d = ej.d;
   if(ej.t==="num") return d.sub==="contar" ? d.n : d.sub==="busca" ? d.n : d.serie[d.hueco];
   if(ej.t==="ami") return d.total-d.x;
   if(ej.t==="vec") return `${d.n-1} y ${d.n+1}`;
-  if(ej.t==="fam") return d.sub==="de" ? "la del "+d.fam : d.buenos.join(", ");
+  if(ej.t==="fam"){
+    if(d.sub==="de") return "la del "+d.fam;
+    if(d.sub==="toca") return d.buenos.join(", ");
+    if(d.sub==="completa") return d.faltan.join(", ");
+    return d.huecos.join(", ");
+  }
   if(ej.t==="sil") return d.sub==="junta" ? "repetir en voz alta" : d.sub==="busca" ? d.obj : d.w;
   return d.letra;
 }
@@ -896,6 +973,9 @@ function ejCompletado(){
     if(ej.t==="sil") S.stats.silOk++;
     if(ej.t==="tra") S.stats.traOk++;
   }
+  // maestría: sube con aciertos a la primera, baja si Nube tuvo que ayudar
+  const ch = S.chispa[ej.t]===undefined ? 5 : S.chispa[ej.t];
+  S.chispa[ej.t] = EjState.guiada ? Math.max(0, ch-2) : (EjState.intentos===0 ? Math.min(10, ch+1) : ch);
   guardar(); actualizarEstrellas();
   Tanda.res.push({t:ej.t, d:ej.d, intentos:EjState.intentos, guiada:EjState.guiada,
     seg: Math.round((Date.now()-EjState.t0)/1000)});
@@ -1005,6 +1085,17 @@ function renderNum(d){
 /* ═══════════ RENDER: AMIGOS ═══════════ */
 function renderAmi(d){
   const z = $("zona-ejercicio");
+  if(d.sub==="inverso"){
+    ponEnunciado(z, "🤝 ¿De quién son amigos?");
+    const big = document.createElement("div");
+    big.style.cssText = "font-size:3.2rem; font-weight:800; color:var(--rosa-osc);";
+    big.textContent = `${d.x} y ${d.y}`;
+    z.appendChild(big);
+    const decir = ()=>hablar(`El ${d.x} y el ${d.y} juntos… ¿son amigos del 5, del 10 o del 20?`);
+    pintarOpciones(z, d.ops.map(v=>"del "+v), d.ops.indexOf(d.x+d.y), decir);
+    decir();
+    return;
+  }
   const bien = d.total - d.x;
   ponEnunciado(z, `🤝 Amigos del ${d.total}`);
   if(d.marco){
@@ -1076,6 +1167,117 @@ function renderVec(d){
 /* ═══════════ RENDER: FAMILIAS ═══════════ */
 function renderFam(d){
   const z = $("zona-ejercicio");
+  if(d.sub==="completa"){
+    ponEnunciado(z, `🏠 Completa la familia del ${d.fam}`);
+    const fila = document.createElement("div");
+    fila.style.cssText = "display:grid; grid-template-columns:repeat(5,1fr); gap:8px; width:100%; max-width:520px;";
+    const slots = {};
+    for(let i=0;i<10;i++){
+      const v = d.fam+i;
+      const c = document.createElement("div");
+      c.className = "opcion";
+      c.style.cssText = "min-width:0; min-height:60px; font-size:1.5rem; padding:4px;";
+      if(d.faltan.includes(v)){ c.textContent = "?"; c.style.borderStyle = "dashed"; c.style.color = "var(--lila-osc)"; slots[v] = c; }
+      else c.textContent = v;
+      fila.appendChild(c);
+    }
+    z.appendChild(fila);
+    const decir = ()=>hablar(`¡Completa la familia del ${d.fam}! Toca abajo los números que faltan.`);
+    const cont = document.createElement("div"); cont.className = "opciones";
+    let puestos = 0;
+    const chips = [];
+    d.chips.forEach(v=>{
+      const b = document.createElement("div");
+      b.className = "opcion"; b.style.fontSize = "1.9rem";
+      b.textContent = v;
+      const esBueno = d.faltan.includes(v);
+      b.addEventListener("pointerdown", e=>{
+        e.preventDefault();
+        if(b.classList.contains("apagada")||b.classList.contains("bien")) return;
+        if(esBueno){
+          b.classList.add("bien","apagada");
+          const s = slots[v]; s.textContent = v; s.classList.add("bien"); s.style.borderStyle = "solid";
+          sfx.brillo(); hablar(`¡El ${v}!`);
+          puestos++;
+          if(puestos===d.faltan.length) setTimeout(ejCompletado, 400);
+        } else {
+          b.classList.add("mal"); setTimeout(()=>b.classList.remove("mal"),600);
+          EjState.intentos++; Tanda.fallosTotales++;
+          if(EjState.intentos>=2 && !EjState.guiada){
+            EjState.guiada = true;
+            chips.forEach(([bb,vv])=>{
+              if(!d.faltan.includes(vv)) bb.classList.add("apagada");
+              else if(!bb.classList.contains("bien")) bb.classList.add("pista");
+            });
+            hablar("Mira, son estos. ¡Tócalos!");
+          } else if(!EjState.guiada){ animo(); setTimeout(decir, 1300); }
+        }
+      });
+      cont.appendChild(b); chips.push([b,v]);
+    });
+    z.appendChild(cont);
+    decir();
+    return;
+  }
+  if(d.sub==="tabla"){
+    ponEnunciado(z, "🏠 La tabla de los números");
+    const grid = document.createElement("div"); grid.className = "tabla100";
+    const celdas = {};
+    for(let v=0; v<=99; v++){
+      const c = document.createElement("div");
+      const esHueco = d.huecos.includes(v);
+      c.className = "t100" + (v===0 ? " cero" : "") + (esHueco ? " hueco" : "");
+      c.textContent = esHueco ? "" : v;
+      grid.appendChild(c); celdas[v] = c;
+    }
+    z.appendChild(grid);
+    const opsCont = document.createElement("div"); opsCont.className = "opciones";
+    z.appendChild(opsCont);
+    const pendientes = d.huecos.slice();
+    const decir = ()=>hablar("¿Qué número va en el hueco que brilla?");
+    hablar("¡La tabla de los números! Vamos a completar los huecos. Mira el que brilla: su familia y sus vecinos te ayudan.");
+    function siguiente(){
+      if(!pendientes.length){ opsCont.innerHTML = ""; setTimeout(ejCompletado, 300); return; }
+      const v = pendientes[0];
+      celdas[v].classList.add("activo");
+      const s = new Set([v]);
+      const swap = parseInt(String(v).split("").reverse().join(""),10);
+      barajar([v-1, v+1, v-10, v+10, swap]).forEach(x=>{
+        if(s.size<3 && x>=1 && x<=99 && !s.has(x)) s.add(x);
+      });
+      const ops = barajar([...s]);
+      opsCont.innerHTML = "";
+      ops.forEach(x=>{
+        const b = document.createElement("div");
+        b.className = "opcion"; b.style.fontSize = "2rem";
+        b.textContent = x;
+        b.addEventListener("pointerdown", e=>{
+          e.preventDefault();
+          if(b.classList.contains("apagada")) return;
+          if(x===v){
+            celdas[v].classList.remove("activo","hueco"); celdas[v].classList.add("ok");
+            celdas[v].textContent = v;
+            sfx.brillo(); hablar(`¡El ${v}!`);
+            pendientes.shift();
+            siguiente();
+          } else {
+            b.classList.add("mal"); setTimeout(()=>b.classList.remove("mal"),600);
+            EjState.intentos++; Tanda.fallosTotales++;
+            if(EjState.intentos>=2){
+              EjState.guiada = true;
+              [...opsCont.children].forEach(o=>{
+                if(o.textContent!==String(v)) o.classList.add("apagada"); else o.classList.add("pista");
+              });
+              hablar("Mira, es este. ¡Tócalo!");
+            } else { animo(); setTimeout(decir, 1200); }
+          }
+        });
+        opsCont.appendChild(b);
+      });
+    }
+    siguiente();
+    return;
+  }
   if(d.sub==="de"){
     ponEnunciado(z, "🏠 ¿De qué familia es?");
     const big = document.createElement("div");
@@ -1151,14 +1353,15 @@ async function grabarYReproducir(btn){
 function renderSil(d){
   const z = $("zona-ejercicio");
   if(d.sub==="junta"){
-    const obj = d.c ? d.c+d.v : d.v;
+    const obj = d.c ? (d.inversa ? d.v+d.c : d.c+d.v) : d.v;
     ponEnunciado(z, d.c ? "¡Vamos a juntar letras!" : "¡Vamos a cantar la vocal!");
     const fila = document.createElement("div"); fila.className = "letras-grandes";
     if(d.c){
       const lc = document.createElement("div"); lc.className = "letrona consonante"; lc.textContent = d.c;
       const mas = document.createElement("div"); mas.style.cssText = "font-size:3rem; font-weight:800;"; mas.textContent = "+";
       const lv = document.createElement("div"); lv.className = "letrona vocal"; lv.textContent = d.v;
-      fila.appendChild(lc); fila.appendChild(mas); fila.appendChild(lv);
+      if(d.inversa){ fila.appendChild(lv); fila.appendChild(mas); fila.appendChild(lc); }
+      else { fila.appendChild(lc); fila.appendChild(mas); fila.appendChild(lv); }
       setTimeout(()=>{
         fila.innerHTML = "";
         const junta = document.createElement("div"); junta.className = "letrona junta"; junta.textContent = obj;
@@ -1171,7 +1374,7 @@ function renderSil(d){
     }
     z.appendChild(fila);
     const frase = d.c
-      ? `La ${NOMBRE_LETRA[d.c]} con la ${d.v}... suena ¡${obj.toLowerCase()}! ¿Lo dices tú? ${obj.toLowerCase()}, ${obj.toLowerCase()}`
+      ? `La ${d.inversa ? d.v : NOMBRE_LETRA[d.c]} con la ${d.inversa ? NOMBRE_LETRA[d.c] : d.v}... suena ¡${obj.toLowerCase()}! ¿Lo dices tú? ${obj.toLowerCase()}, ${obj.toLowerCase()}`
       : `¡La vocal ${d.v}! ${d.v}, ${d.v}, ${d.v}. ¿La dices tú?`;
     const decir = ()=>hablar(frase, true);
     const fila2 = document.createElement("div"); fila2.className = "fila";
@@ -1232,7 +1435,22 @@ const LETRAS_TRAZO = {
   N:[[[16,90],[16,10],[84,90],[84,10]]],
   D:[[[26,90],[26,10]],[[26,12],[54,14],[72,30],[76,50],[72,70],[54,86],[26,88]]],
   F:[[[26,90],[26,10],[78,10]],[[26,50],[66,50]]],
-  B:[[[26,90],[26,10]],[[26,12],[52,10],[64,20],[64,30],[52,40],[26,42]],[[26,44],[56,44],[70,54],[70,72],[56,86],[26,88]]]
+  B:[[[26,90],[26,10]],[[26,12],[52,10],[64,20],[64,30],[52,40],[26,42]],[[26,44],[56,44],[70,54],[70,72],[56,86],[26,88]]],
+  J:[[[70,10],[70,68],[62,86],[44,90],[28,82],[22,68]]],
+  V:[[[16,10],[50,90],[84,10]]],
+  Z:[[[18,10],[82,10],[18,90],[82,90]]],
+  C:[[[76,24],[58,10],[38,12],[24,28],[20,50],[24,72],[38,88],[58,90],[76,76]]],
+  R:[[[26,90],[26,10]],[[26,12],[52,10],[68,20],[70,32],[62,44],[40,50],[26,50]],[[40,52],[74,90]]],
+  "0":[circuloPts(50,50,37,22)],
+  "1":[[[34,26],[52,10],[52,90]]],
+  "2":[[[26,26],[36,12],[58,10],[72,22],[70,38],[54,56],[34,74],[24,88],[78,88]]],
+  "3":[[[26,18],[44,10],[64,14],[70,28],[60,42],[46,48],[62,54],[72,68],[64,84],[44,90],[26,82]]],
+  "4":[[[54,10],[22,58],[80,58]],[[62,26],[62,90]]],
+  "5":[[[72,10],[30,10],[28,44],[50,40],[68,50],[72,66],[62,84],[40,90],[26,80]]],
+  "6":[[[68,12],[46,10],[30,28],[24,52],[26,70],[40,88],[56,88],[68,74],[66,58],[52,48],[36,52],[26,62]]],
+  "7":[[[22,10],[80,10],[44,90]]],
+  "8":[circuloPts(50,30,20,18), circuloPts(50,71,23,18)],
+  "9":[circuloPts(46,32,22,18), [[68,36],[66,62],[56,90]]]
 };
 function muestrearTrazos(trazos, paso){
   const pts = [];
@@ -1248,7 +1466,8 @@ function muestrearTrazos(trazos, paso){
 function renderTra(d){
   const z = $("zona-ejercicio");
   const esVocal = VOCALES.includes(d.letra);
-  ponEnunciado(z, `✍️ La ${esVocal?"vocal":"letra"} ${d.letra}`);
+  const esNum = /^\d$/.test(d.letra);
+  ponEnunciado(z, esNum ? `✍️ El número ${d.letra}` : `✍️ La ${esVocal?"vocal":"letra"} ${d.letra}`);
   const s = Math.min(Math.round(innerWidth*0.82), 340);
   const wrap = document.createElement("div"); wrap.id = "trazo-wrap";
   const cv = document.createElement("canvas"); cv.id = "trazo-canvas";
@@ -1304,7 +1523,7 @@ function renderTra(d){
     const pct = cubiertos/objetivo.length;
     if(pct >= 0.78){
       hecho = true;
-      hablar(`¡Qué ${d.letra.toLowerCase()} más bonita has dibujado!`);
+      hablar(esNum ? `¡Qué ${NOMBRE_LETRA[d.letra]} más bonito has dibujado!` : `¡Qué ${d.letra.toLowerCase()} más bonita has dibujado!`);
       setTimeout(ejCompletado, 700);
     } else if(dibujados.length>12 && avisos<3){
       avisos++;
@@ -1319,7 +1538,9 @@ function renderTra(d){
   bOtra.addEventListener("pointerdown", e=>{ e.preventDefault(); decir(); });
   fila.appendChild(bBorrar); fila.appendChild(bOtra);
   z.appendChild(fila);
-  const decir = ()=>hablar(`¡Vamos a dibujar la ${esVocal?"vocal":"letra"} ${NOMBRE_LETRA[d.letra]}! Empieza en el punto verde y repasa todo el camino con el dedo.`);
+  const decir = ()=>hablar(esNum
+    ? `¡Vamos a dibujar el número ${NOMBRE_LETRA[d.letra]}! Empieza en el punto verde y repasa todo el camino con el dedo.`
+    : `¡Vamos a dibujar la ${esVocal?"vocal":"letra"} ${NOMBRE_LETRA[d.letra]}! Empieza en el punto verde y repasa todo el camino con el dedo.`);
   decir();
 }
 
@@ -1847,7 +2068,11 @@ $("btn-salir-juego").addEventListener("click", ()=>{
 });
 document.querySelectorAll("#s-elegir [data-juego]").forEach(b=>
   b.addEventListener("click", ()=>{
-    startTanda({origen:"libre", ejercicios:genTanda([b.dataset.juego], S.nivelLibre, 5), nivel:S.nivelLibre});
+    // nivel automático: el nivel libre de papá ± la maestría de ella en ese juego
+    const j = b.dataset.juego;
+    const ch = S.chispa[j]===undefined ? 5 : S.chispa[j];
+    const nivelEf = Math.max(1, Math.min(4, S.nivelLibre + (ch>=8?1:0) - (ch<=2?1:0)));
+    startTanda({origen:"libre", ejercicios:genTanda([j], nivelEf, 5), nivel:nivelEf});
   }));
 
 /* papá */
