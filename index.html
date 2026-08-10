@@ -85,6 +85,8 @@ h2{font-size:1.5rem; margin:.15em 0; text-align:center; font-weight:800;}
 .opcion.bien{border-color:var(--verde); background:#e9fcf6;}
 .opcion.pista{animation:latido .9s ease-in-out infinite; border-color:var(--verde);}
 .opcion.apagada{opacity:.35; pointer-events:none;}
+/* rejilla congelada un momento tras un fallo: se escucha la pregunta otra vez */
+.opciones.esperando .opcion{pointer-events:none; opacity:.75;}
 @keyframes temblor{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
 @keyframes latido{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 
@@ -297,6 +299,9 @@ textarea{resize:vertical; min-height:64px;}
   <h1>Mis premios</h1>
   <button class="btn btn-azul btn-grande" id="btn-globos">🎈 Globos <small style="font-size:1.05rem;">(3 ⭐)</small></button>
   <button class="btn btn-verde btn-grande" id="btn-mariposas">🦋 Mariposas <small style="font-size:1.05rem;">(6 ⭐)</small></button>
+  <button class="btn btn-lila btn-grande" id="btn-naves">🚀 Nave <small style="font-size:1.05rem;">(6 ⭐)</small></button>
+  <button class="btn btn-oro btn-grande" id="btn-plataformas">🪜 Saltos <small style="font-size:1.05rem;">(5 ⭐)</small></button>
+  <button class="btn btn-rojo btn-grande" id="btn-dibujar">🎨 Pizarra <small style="font-size:1.05rem;">(4 ⭐)</small></button>
   <button class="btn btn-oro btn-grande" id="btn-cofre">🎀 Mi cofre</button>
 </section>
 
@@ -361,6 +366,9 @@ textarea{resize:vertical; min-height:64px;}
   <div id="resumen-insignias" class="fila"></div>
   <button class="btn btn-azul btn-grande" id="btn-premio-globos">🎈 ¡Premio: GLOBOS!</button>
   <button class="btn btn-verde btn-grande" id="btn-premio-mariposas">🦋 ¡Premio: MARIPOSAS!</button>
+  <button class="btn btn-lila btn-grande" id="btn-premio-naves">🚀 ¡Premio: NAVE!</button>
+  <button class="btn btn-oro btn-grande" id="btn-premio-plataformas">🪜 ¡Premio: SALTOS!</button>
+  <button class="btn btn-rojo btn-grande" id="btn-premio-dibujar">🎨 ¡Premio: PIZARRA!</button>
   <button class="btn btn-lila" id="btn-resumen-volver">🌈 Volver</button>
 </section>
 
@@ -384,6 +392,38 @@ textarea{resize:vertical; min-height:64px;}
   </div>
   <h2>¡Caza las mariposas!</h2>
   <div id="mariposas-zona" style="position:relative; width:100%; height:62vh; background:linear-gradient(180deg,#e8fbf2,#dff3ff); border-radius:30px; overflow:hidden; box-shadow:inset 0 4px 18px rgba(0,0,0,.08);"></div>
+</section>
+
+<!-- NAVES -->
+<section class="screen" id="s-naves">
+  <div class="topbar">
+    <button class="icono-btn" id="btn-salir-naves">✖️</button>
+    <span class="chip">⏱️ <span id="naves-tiempo">25</span></span>
+    <span class="chip">⭐ <span id="naves-cont">0</span></span>
+  </div>
+  <h2>¡Recoge estrellas con tu nave!</h2>
+  <div id="naves-zona" style="position:relative; width:100%; height:62vh; background:linear-gradient(180deg,#1b1040,#3a2670 60%,#5b3f9c); border-radius:30px; overflow:hidden; box-shadow:inset 0 4px 18px rgba(0,0,0,.35); touch-action:none;"></div>
+</section>
+
+<!-- PLATAFORMAS -->
+<section class="screen" id="s-plataformas">
+  <div class="topbar">
+    <button class="icono-btn" id="btn-salir-plataformas">✖️</button>
+    <span class="chip">⏱️ <span id="plat-tiempo">30</span></span>
+    <span class="chip">🪜 <span id="plat-cont">0</span></span>
+  </div>
+  <h2>¡Sube saltando!</h2>
+  <div id="plat-zona" style="position:relative; width:100%; height:62vh; background:linear-gradient(180deg,#cfefff,#eafaf1); border-radius:30px; overflow:hidden; box-shadow:inset 0 4px 18px rgba(0,0,0,.08); touch-action:none;"></div>
+</section>
+
+<!-- PIZARRA MÁGICA -->
+<section class="screen" id="s-dibujar">
+  <div class="topbar">
+    <button class="icono-btn" id="btn-salir-dibujar">✖️</button>
+    <span class="chip">🎨 Pizarra</span>
+  </div>
+  <div id="dib-paleta" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:8px;"></div>
+  <canvas id="dib-lienzo" style="width:100%; height:58vh; background:#fff; border-radius:26px; box-shadow:inset 0 4px 18px rgba(0,0,0,.08); touch-action:none;"></canvas>
 </section>
 
 <!-- COFRE -->
@@ -576,6 +616,59 @@ function actualizarEstrellas(){
 }
 
 /* ═══════════ VOZ (lo más importante: Jimena no lee) ═══════════ */
+/* Coger la primera voz española que devuelve el navegador sale mal: en Linux es
+   la metálica de espeak y en Windows a veces cae una de Latinoamérica. Aquí se
+   puntúan y se elige la mejor, y las frases largas se trocean por signos de
+   puntuación para que respire — con una niña que no lee, la voz ES la interfaz.
+   ⚠️ Gemelo de PM_VOZ en pequemisiones/app/temas.js: si cambia uno, cambia el otro. */
+const PM_VOZ = {
+  _voz: null, _vistas: -1,
+  elige(){
+    if(!window.speechSynthesis) return null;
+    const voces = speechSynthesis.getVoices();
+    if(voces.length !== this._vistas){ this._vistas = voces.length; this._voz = null; }
+    if(this._voz) return this._voz;
+    const nota = v => {
+      let n = 0;
+      const nom = (v.name||"").toLowerCase();
+      if(v.lang === "es-ES") n += 4; else if((v.lang||"").toLowerCase().startsWith("es")) n += 2;
+      if(nom.includes("google")) n += 3;                      // la de Android/Chrome, muy natural
+      if(/m[oó]nica|paulina|marisol|helena|laura|elvira|álvaro|alvaro|dario|darío/.test(nom)) n += 2; // las buenas de iOS/Windows
+      if(nom.includes("espeak") || nom.includes("robot")) n -= 6; // la metálica de Linux
+      return n;
+    };
+    this._voz = voces.filter(v=>(v.lang||"").toLowerCase().startsWith("es"))
+      .sort((a,b)=>nota(b)-nota(a))[0] || null;
+    return this._voz;
+  },
+  decir(txt, opts){
+    if(!window.speechSynthesis) return;
+    const o = opts || {};
+    try{
+      speechSynthesis.cancel();
+      // partir por puntos y signos; los trozos aún largos, por comas
+      const trozos = String(txt).replace(/([.:;!?…])\s+/g, "$1\n").split(/\n+/)
+        .flatMap(t=>{
+          t = t.trim();
+          if(!t) return [];
+          if(t.length <= 90) return [t];
+          return t.replace(/,\s+/g, ",\n").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+        });
+      const voz = this.elige();
+      trozos.forEach(t=>{
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = "es-ES";
+        u.rate = o.rate || 0.85;
+        u.pitch = o.pitch || 1.15;
+        if(voz) u.voice = voz;
+        speechSynthesis.speak(u); // encolados: entre trozo y trozo hay una respiración
+      });
+    }catch(e){ /* sin voz no se rompe nada: la burbuja de Nube sigue ahí */ }
+  }
+};
+if(window.speechSynthesis && speechSynthesis.addEventListener){
+  speechSynthesis.addEventListener("voiceschanged", ()=>{ PM_VOZ._voz = null; });
+}
 let ultimaFrase = "";
 function hablar(txt, lento){
   ultimaFrase = txt;
@@ -584,14 +677,7 @@ function hablar(txt, lento){
   clearTimeout(hablar._t);
   hablar._t = setTimeout(()=>b.classList.remove("ver"), Math.max(3200, txt.length*90));
   if(!S.sonido || !window.speechSynthesis) return;
-  try{
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(txt);
-    u.lang = "es-ES"; u.rate = lento ? 0.62 : 0.82; u.pitch = 1.15;
-    const v = speechSynthesis.getVoices().find(v=>v.lang && v.lang.startsWith("es"));
-    if(v) u.voice = v;
-    speechSynthesis.speak(u);
-  }catch(e){}
+  PM_VOZ.decir(txt, {rate: lento ? 0.6 : 0.8, pitch: 1.15});
 }
 function repetir(){ if(ultimaFrase) hablar(ultimaFrase); }
 
@@ -1105,7 +1191,8 @@ let Tanda = null, EjState = null, salirArmado = false;
 function startTanda(cfg){
   Tanda = {origen:cfg.origen, misionId:cfg.misionId||null, titulo:cfg.titulo||"",
     list:cfg.ejercicios, idx:0, res:[], estrellas0:S.estrellas, t0:Date.now(),
-    nivel:cfg.nivel, fallosTotales:0, racha:0, diaria:cfg.diaria||false};
+    nivel:cfg.nivel, fallosTotales:0, racha:0, diaria:cfg.diaria||false,
+    repesca:[], enRepesca:false};
   go("s-juego");
   renderEj();
 }
@@ -1116,6 +1203,21 @@ function renderEj(){
   const z = $("zona-ejercicio"); z.innerHTML = "";
   EjState = {intentos:0, guiada:false, t0:Date.now()};
   ({num:renderNum, sub:renderSub, pal:renderPal, ret:renderRet, ami:renderAmi, vec:renderVec, fam:renderFam, sil:renderSil, tra:renderTra})[ej.t](ej.d);
+}
+/* REPESCA: lo que se falla vuelve a salir al final de la tanda, pero con números
+   nuevos del mismo juego — así no se resuelve de memoria, hay que saberlo. Es la
+   otra mitad del anti-toqueteo: acertar a la primera acaba antes. Máximo 2, para
+   que la tanda no se haga infinita, y una repesca ya no genera otra. */
+const MAX_REPESCA = 2;
+function apuntarRepesca(ej){
+  if(ej.repesca || Tanda.enRepesca) return;
+  if(!EjState.guiada && EjState.intentos===0) return; // salió a la primera: nada que repescar
+  if(Tanda.repesca.length >= MAX_REPESCA) return;
+  if(Tanda.repesca.some(r=>r.t===ej.t)) return;      // un repaso por juego, no cuatro del mismo
+  const gen = GEN[ej.t];
+  const nuevo = gen ? gen(Tanda.nivel || 1) : {t:ej.t, d:ej.d};
+  nuevo.repesca = true;
+  Tanda.repesca.push(nuevo);
 }
 function ejCompletado(){
   if(!Tanda) return; // salió de la tanda a mitad
@@ -1142,6 +1244,7 @@ function ejCompletado(){
   Tanda.res.push({t:ej.t, d:ej.d, intentos:EjState.intentos, guiada:EjState.guiada,
     seg: Math.round((Date.now()-EjState.t0)/1000)});
   if(!EjState.guiada && EjState.intentos===0) Tanda.racha++; else Tanda.racha = 0;
+  apuntarRepesca(ej);
   if(!EjState.guiada && (Tanda.racha===3 || Tanda.racha===5 || Tanda.racha===7)){
     premioGrande(`¡${Tanda.racha} SEGUIDAS! 🎆`);
     hablar(`¡${Tanda.racha} seguidas, ${S.nombre}! ¡Eres una campeona!`);
@@ -1162,32 +1265,49 @@ function ejCompletado(){
   }, 2100);
 }
 /* motor de opciones con acierto guiado (nunca se atasca) */
+/* Ojo con el equilibrio de aquí: con tres opciones, ir tocando a lo loco acierta
+   siempre en pocos toques. Si además el toque es instantáneo, la app le está
+   enseñando a la peque espabilada que probar es MÁS RÁPIDO que pensar, y se pasa la
+   tanda entera sin aprender nada. Por eso un fallo congela la rejilla mientras Nube
+   vuelve a leer la pregunta: no hay rojo, no se pierden estrellas, fallar solo cuesta
+   tiempo. Y lo que se falla vuelve a salir al final (ver `ejCompletado`). */
+const PAUSA_FALLO = 1900;
 function pintarOpciones(z, items, correctoIdx, reDecir){
   const cont = document.createElement("div"); cont.className = "opciones";
   const botones = [];
+  let bloqueado = false;
   items.forEach((it, i)=>{
     const b = document.createElement("div");
     b.className = "opcion";
     b.innerHTML = it;
     b.addEventListener("pointerdown", e=>{
       e.preventDefault();
-      if(b.classList.contains("apagada") || b.classList.contains("bien")) return;
+      if(bloqueado || b.classList.contains("apagada") || b.classList.contains("bien")) return;
       if(i===correctoIdx){
         b.classList.add("bien");
         botones.forEach(x=>{ if(x!==b) x.classList.add("apagada"); });
         ejCompletado();
       } else {
         b.classList.add("mal");
-        setTimeout(()=>b.classList.remove("mal"), 600);
         EjState.intentos++; Tanda.fallosTotales++;
         if(EjState.intentos>=2){
+          setTimeout(()=>b.classList.remove("mal"), 600);
           EjState.guiada = true;
           botones.forEach((x,xi)=>{ if(xi!==correctoIdx) x.classList.add("apagada"); });
           botones[correctoIdx].classList.add("pista");
           hablar("Mira, es este. ¡Tócalo!");
         } else {
+          // esa opción ya no vale, y la rejilla se queda quieta mientras se repite
+          // la pregunta: da tiempo a mirarla de verdad antes del siguiente toque
+          bloqueado = true;
+          cont.classList.add("esperando");
+          setTimeout(()=>{ b.classList.remove("mal"); b.classList.add("apagada"); }, 600);
           animo();
-          setTimeout(reDecir, 1300);
+          setTimeout(reDecir, 800);
+          setTimeout(()=>{
+            bloqueado = false;
+            cont.classList.remove("esperando");
+          }, PAUSA_FALLO);
         }
       }
     });
@@ -1851,6 +1971,16 @@ function renderTra(d){
 /* ═══════════ FIN DE TANDA ═══════════ */
 function hoyISO(){ return new Date().toISOString().slice(0,10); }
 function finTanda(){
+  // antes de cerrar: el repaso de lo que se atragantó
+  if(Tanda.repesca.length && !Tanda.enRepesca){
+    Tanda.enRepesca = true;
+    Tanda.list = Tanda.list.concat(Tanda.repesca);
+    // el enunciado del ejercicio se dice al pintarlo y `hablar` corta lo anterior:
+    // hay que dejar que suene el aviso antes de pintar el repaso
+    hablar("¡Y ahora el repaso! Otro igualito que el que se nos resistió.");
+    setTimeout(()=>{ if(Tanda) renderEj(); }, 1800);
+    return;
+  }
   if(Tanda.diaria){ tocaHoy(); S.hoy.diaria = true; guardar(); }
   const seg = Math.round((Date.now()-Tanda.t0)/1000);
   const ganadas = S.estrellas - Tanda.estrellas0;
@@ -1883,8 +2013,7 @@ function finTanda(){
   $("resumen-ganadas").textContent = ganadas;
   $("resumen-insignias").innerHTML = nuevas.map(ins=>
     `<div class="insig nueva"><div class="em">${ins.e}</div><div class="nom">¡Tesoro nuevo!<br>${ins.nombre}</div></div>`).join("");
-  $("btn-premio-globos").classList.remove("oculto");
-  $("btn-premio-mariposas").classList.remove("oculto");
+  JUEGOS.forEach(j=>$("btn-premio-"+j.id).classList.remove("oculto"));
   go("s-resumen");
   sfx.fanfarria();
   lanzarFuegos(Tanda.fallosTotales===0 ? 9 : 6);
@@ -1985,6 +2114,22 @@ function pintarMisiones(){
   }
 }
 
+/* Los juegos de premio, en un solo sitio: el botón del cofre de estrellas, el de
+   premio gratis del final de tanda, cómo arrancan y cómo se salen. Añadir uno
+   nuevo es añadir una línea aquí (y su pantalla).
+   REGLA FIJA: los minijuegos NO dan estrellas, solo diversión — la moneda sale de
+   los ejercicios y de ningún otro sitio. */
+const JUEGOS = [
+  {id:"globos",      boton:"btn-globos",      start:g=>startGlobos(g),      fin:()=>endGlobos(true)},
+  {id:"mariposas",   boton:"btn-mariposas",   start:g=>startMariposas(g),   fin:()=>endMariposas(true)},
+  {id:"naves",       boton:"btn-naves",       start:g=>startNaves(g),       fin:()=>endNaves(true)},
+  {id:"plataformas", boton:"btn-plataformas", start:g=>startPlataformas(g), fin:()=>endPlataformas(true)},
+  {id:"dibujar",     boton:"btn-dibujar",     start:g=>startDibujar(g),     fin:()=>endDibujar()}
+];
+function ocultarPremiosGratis(){
+  JUEGOS.forEach(j=>$("btn-premio-"+j.id).classList.add("oculto"));
+}
+
 /* ═══════════ GLOBOS ═══════════ */
 const Globos = {n:0, t:20, timer:null, spawner:null, rafRun:false, items:[], retorno:"s-home"};
 function startGlobos(gratis){
@@ -1997,8 +2142,7 @@ function startGlobos(gratis){
   }
   Globos.retorno = pantallaActual==="s-resumen" ? "s-resumen" : pantallaActual==="s-premios" ? "s-premios" : "s-home";
   S.premioGratis = false;
-  $("btn-premio-globos").classList.add("oculto");
-  $("btn-premio-mariposas").classList.add("oculto");
+  ocultarPremiosGratis();
   go("s-globos");
   const zona = $("globos-zona");
   zona.innerHTML = ""; Globos.items = []; Globos.n = 0; Globos.t = 20;
@@ -2083,8 +2227,7 @@ function startMariposas(gratis){
   }
   Mari.retorno = pantallaActual==="s-resumen" ? "s-resumen" : pantallaActual==="s-premios" ? "s-premios" : "s-home";
   S.premioGratis = false;
-  $("btn-premio-globos").classList.add("oculto");
-  $("btn-premio-mariposas").classList.add("oculto");
+  ocultarPremiosGratis();
   go("s-mariposas");
   const zona = $("mariposas-zona");
   zona.innerHTML = "";
@@ -2172,6 +2315,380 @@ function endMariposas(abandonado){
   setTimeout(()=>go(Mari.retorno), abandonado ? 0 : 1700);
 }
 addEventListener("pointerup", ()=>Mari.activo = false);
+
+/* ═══════════ NAVES 🚀 ═══════════
+   Recoger, nunca disparar: la nave sigue el dedo y va cazando estrellas que
+   caen. Las nubes de polvo no quitan puntos ni acaban la partida — solo frenan
+   un momento. En esta casa no hay pantallas de "has perdido". */
+const Naves = {n:0, t:25, timer:null, spawner:null, rafRun:false, items:[], retorno:"s-home",
+  x:0.5, frenaHasta:0, tPrev:0};
+function startNaves(gratis){
+  if(limiteAlcanzado()){ despedidaLimite(); return; }
+  if(!gratis){
+    if(S.estrellas < 6){
+      hablar("¡La nave cuesta 6 estrellas! Juega una tanda y las consigues, ¡tú puedes!"); sfx.mal(); return;
+    }
+    S.estrellas -= 6; guardar(); actualizarEstrellas();
+  }
+  Naves.retorno = pantallaActual==="s-resumen" ? "s-resumen" : pantallaActual==="s-premios" ? "s-premios" : "s-home";
+  S.premioGratis = false;
+  ocultarPremiosGratis();
+  go("s-naves");
+  const zona = $("naves-zona");
+  zona.innerHTML = "";
+  Naves.items = []; Naves.n = 0; Naves.t = 25; Naves.x = 0.5; Naves.frenaHasta = 0; Naves.tPrev = 0;
+  $("naves-cont").textContent = "0"; $("naves-tiempo").textContent = "25";
+  // estrellitas de fondo, para que se note que se vuela
+  for(let i=0;i<26;i++){
+    const e = document.createElement("div");
+    e.style.cssText = `position:absolute; left:${ri(1,98)}%; top:${ri(1,96)}%; color:#fff; opacity:${ri(2,7)/10};
+      font-size:${ri(6,13)}px; pointer-events:none;`;
+    e.textContent = "·";
+    zona.appendChild(e);
+  }
+  const nave = document.createElement("div");
+  nave.id = "nave-jug";
+  nave.textContent = "🚀";
+  nave.style.cssText = "position:absolute; font-size:3rem; pointer-events:none; z-index:4; transform:translate(-50%,-50%) rotate(-45deg);";
+  zona.appendChild(nave);
+  hablar("¡Mueve el dedo para llevar la nave y recoge todas las estrellas!");
+  if(!zona.dataset.cableada){
+    zona.dataset.cableada = "1";
+    const seguir = e=>{
+      e.preventDefault();
+      const r = zona.getBoundingClientRect();
+      Naves.x = Math.max(0.06, Math.min(0.94, (e.clientX - r.left) / r.width));
+    };
+    zona.addEventListener("pointerdown", seguir);
+    zona.addEventListener("pointermove", e=>{ if(e.buttons || e.pointerType!=="mouse") seguir(e); });
+  }
+  Naves.spawner = setInterval(()=>{
+    if(pantallaActual!=="s-naves") return;
+    const polvo = conProb(.22);
+    const it = document.createElement("div");
+    it.textContent = polvo ? "☁️" : "⭐";
+    it.style.cssText = `position:absolute; font-size:${polvo?2.4:2.1}rem; pointer-events:none; z-index:3;
+      transform:translate(-50%,-50%);`;
+    zona.appendChild(it);
+    Naves.items.push({el:it, polvo, x: ri(8,92)/100, y:-40, v: ri(95,150) + (25-Naves.t)*3});
+  }, 620);
+  Naves.timer = setInterval(()=>{
+    Naves.t--; $("naves-tiempo").textContent = Naves.t;
+    if(Naves.t<=0) endNaves(false);
+  }, 1000);
+  if(!Naves.rafRun){ Naves.rafRun = true; requestAnimationFrame(navesTick); }
+}
+function navesTick(ts){
+  if(pantallaActual!=="s-naves"){ Naves.rafRun = false; return; }
+  const dt = Naves.tPrev ? Math.min((ts-Naves.tPrev)/1000, .05) : .016;
+  Naves.tPrev = ts;
+  const zona = $("naves-zona"), nave = $("nave-jug");
+  if(!zona || !nave){ Naves.rafRun = false; return; }
+  const W = zona.clientWidth, H = zona.clientHeight;
+  const frenada = ts < Naves.frenaHasta;
+  const naveX = Naves.x * W, naveY = H * 0.82;
+  nave.style.left = naveX + "px";
+  nave.style.top = naveY + "px";
+  nave.style.transform = `translate(-50%,-50%) rotate(-45deg) scale(${frenada ? .82 : 1})`;
+  nave.style.filter = frenada ? "grayscale(.7)" : "";
+  const rz = zona.getBoundingClientRect();
+  Naves.items = Naves.items.filter(it=>{
+    it.y += it.v * dt * (frenada && it.polvo ? .5 : 1);
+    const px = it.x * W;
+    it.el.style.left = px + "px";
+    it.el.style.top = it.y + "px";
+    if(it.y > H + 40){ it.el.remove(); return false; }
+    if(Math.abs(px - naveX) < 42 && Math.abs(it.y - naveY) < 40){
+      if(it.polvo){
+        if(!frenada){
+          Naves.frenaHasta = ts + 700;
+          sfx.mal();
+          it.el.textContent = "💨";
+          setTimeout(()=>it.el.remove(), 260);
+          return false;
+        }
+        return true;
+      }
+      Naves.n++; $("naves-cont").textContent = Naves.n;
+      sfx.brillo(); sfx.pop();
+      confeti(rz.left + px, rz.top + it.y, 12);
+      it.el.textContent = "✨";
+      setTimeout(()=>it.el.remove(), 200);
+      return false;
+    }
+    return true;
+  });
+  requestAnimationFrame(navesTick);
+}
+function endNaves(abandonado){
+  clearInterval(Naves.timer); clearInterval(Naves.spawner);
+  Naves.timer = Naves.spawner = null;
+  S.stats.naves = (S.stats.naves||0) + Naves.n;
+  if(!abandonado){
+    premioGrande(`🚀 ¡${Naves.n} estrellas!`);
+    hablar(`¡Has recogido ${Naves.n} estrellas volando, ${S.nombre}! ¡Eres una astronauta!`);
+    sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
+  }
+  guardar();
+  chequearInsignias();
+  setTimeout(()=>go(Naves.retorno), abandonado ? 0 : 1700);
+}
+
+/* ═══════════ PLATAFORMAS 🪜 ═══════════
+   Rebota solo: el peque únicamente mueve el dedo a los lados, que es lo que un
+   niño de tres años puede hacer sin frustrarse. Y no se puede caer: si se va por
+   abajo, una nube lo recoge y lo vuelve a subir. Se cuenta lo que sube, nunca lo
+   que se cae. */
+const Plat = {n:0, t:30, timer:null, rafRun:false, retorno:"s-home", tPrev:0,
+  x:0.5, xObj:0.5, y:0, vy:0, cam:0, alto:0, sitios:[], heroe:null};
+const PLAT_SALTO = 780, PLAT_GRAVEDAD = 1500, PLAT_HUECO = 95;
+function startPlataformas(gratis){
+  if(limiteAlcanzado()){ despedidaLimite(); return; }
+  if(!gratis){
+    if(S.estrellas < 5){
+      hablar("¡Saltar cuesta 5 estrellas! Juega una tanda y las consigues, ¡tú puedes!"); sfx.mal(); return;
+    }
+    S.estrellas -= 5; guardar(); actualizarEstrellas();
+  }
+  Plat.retorno = pantallaActual==="s-resumen" ? "s-resumen" : pantallaActual==="s-premios" ? "s-premios" : "s-home";
+  S.premioGratis = false;
+  ocultarPremiosGratis();
+  go("s-plataformas");
+  const zona = $("plat-zona");
+  zona.innerHTML = "";
+  const h = document.createElement("div");
+  h.id = "plat-heroe";
+  h.textContent = "🦄";
+  h.style.cssText = "position:absolute; font-size:2.8rem; pointer-events:none; z-index:5; transform:translate(-50%,-50%);";
+  zona.appendChild(h);
+  Plat.heroe = h;
+  Plat.sitios = []; Plat.n = 0; Plat.t = 30; Plat.tPrev = 0;
+  Plat.x = Plat.xObj = 0.5; Plat.y = 90; Plat.vy = 0; Plat.cam = 0; Plat.alto = 0;
+  $("plat-cont").textContent = "0"; $("plat-tiempo").textContent = "30";
+  crearPlataforma(zona, 0.5, 40, false);              // la de debajo de los pies
+  for(let i=1;i<9;i++) crearPlataforma(zona, ri(12,88)/100, 40 + i*PLAT_HUECO, conProb(.35));
+  hablar("¡Mueve el dedo a los lados! Salta solo, tú solo tienes que llevarlo.");
+  if(!zona.dataset.cableada){
+    zona.dataset.cableada = "1";
+    const seguir = e=>{
+      e.preventDefault();
+      const r = zona.getBoundingClientRect();
+      Plat.xObj = Math.max(0.07, Math.min(0.93, (e.clientX - r.left) / r.width));
+    };
+    zona.addEventListener("pointerdown", seguir);
+    zona.addEventListener("pointermove", e=>{ if(e.buttons || e.pointerType!=="mouse") seguir(e); });
+  }
+  Plat.timer = setInterval(()=>{
+    Plat.t--; $("plat-tiempo").textContent = Plat.t;
+    if(Plat.t<=0) endPlataformas(false);
+  }, 1000);
+  if(!Plat.rafRun){ Plat.rafRun = true; requestAnimationFrame(platTick); }
+}
+function crearPlataforma(zona, x, y, conEstrella){
+  const el = document.createElement("div");
+  el.style.cssText = `position:absolute; width:104px; height:18px; border-radius:12px; z-index:2;
+    background:linear-gradient(180deg,#8fd694,#5fb96b); box-shadow:0 3px 0 rgba(0,0,0,.12); transform:translate(-50%,-50%);`;
+  zona.appendChild(el);
+  const p = {x, y, el, estrella:null};
+  if(conEstrella){
+    const s = document.createElement("div");
+    s.textContent = "⭐";
+    s.style.cssText = "position:absolute; font-size:1.6rem; z-index:3; pointer-events:none; transform:translate(-50%,-50%);";
+    zona.appendChild(s);
+    p.estrella = s;
+  }
+  Plat.sitios.push(p);
+  return p;
+}
+function platTick(ts){
+  if(pantallaActual!=="s-plataformas"){ Plat.rafRun = false; return; }
+  const dt = Plat.tPrev ? Math.min((ts-Plat.tPrev)/1000, .04) : .016;
+  Plat.tPrev = ts;
+  const zona = $("plat-zona");
+  if(!zona || !Plat.heroe){ Plat.rafRun = false; return; }
+  const W = zona.clientWidth, H = zona.clientHeight;
+  // el muñeco persigue al dedo con suavidad (nada de saltos bruscos)
+  Plat.x += (Plat.xObj - Plat.x) * Math.min(1, dt*9);
+  const vyAntes = Plat.vy;
+  Plat.vy -= PLAT_GRAVEDAD * dt;
+  const yAntes = Plat.y;
+  Plat.y += Plat.vy * dt;
+  // Rebote: solo al bajar, y cuando el muñeco CRUZA la tabla en este fotograma.
+  // Ojo con esto: bajando a 780 px/s se avanzan ~13 px por fotograma, así que
+  // preguntar "¿está justo a la altura de la tabla?" falla casi siempre y el
+  // muñeco la atraviesa. Hay que comparar dónde estaba y dónde está.
+  if(Plat.vy < 0){
+    for(const p of Plat.sitios){
+      const dx = Math.abs(p.x - Plat.x) * W;
+      if(dx < 60 && yAntes >= p.y + 14 && Plat.y <= p.y + 14){ // 52 de tabla + un poco de manga ancha
+        Plat.y = p.y + 14; Plat.vy = PLAT_SALTO;
+        sfx.pop();
+        p.el.animate && p.el.animate([{transform:"translate(-50%,-50%) scaleY(1)"},
+          {transform:"translate(-50%,-50%) scaleY(.55)"},{transform:"translate(-50%,-50%) scaleY(1)"}], {duration:180});
+        break;
+      }
+    }
+  }
+  if(vyAntes >= 0 && Plat.vy < 0 && Plat.y > Plat.alto) Plat.alto = Plat.y;
+  // la cámara solo sube: lo que se sube no se pierde
+  Plat.cam = Math.max(Plat.cam, Plat.y - H*0.55);
+  // rescate: nadie se cae del todo
+  if(Plat.y < Plat.cam - 60){
+    const abajo = Plat.sitios.filter(p=>p.y > Plat.cam + 20).sort((a,b)=>a.y-b.y)[0];
+    Plat.y = abajo ? abajo.y + 14 : Plat.cam + 40;
+    Plat.x = Plat.xObj = abajo ? abajo.x : 0.5;
+    Plat.vy = PLAT_SALTO;
+    sfx.brillo();
+    // la nube rescata siempre, pero no lo dice cada dos por tres: cansa
+    if(ts - (Plat.dicho||0) > 5000){ Plat.dicho = ts; hablar("¡Te cojo! Vamos otra vez arriba."); }
+  }
+  // sembrar por arriba y recoger lo que quedó abajo
+  const techo = Plat.sitios.reduce((m,p)=>Math.max(m,p.y), 0);
+  if(techo < Plat.cam + H + PLAT_HUECO) crearPlataforma(zona, ri(10,90)/100, techo + PLAT_HUECO, conProb(.35));
+  const rz = zona.getBoundingClientRect();
+  Plat.sitios = Plat.sitios.filter(p=>{
+    if(p.y < Plat.cam - 80){ p.el.remove(); if(p.estrella) p.estrella.remove(); return false; }
+    const py = H - (p.y - Plat.cam);
+    p.el.style.left = (p.x*W) + "px"; p.el.style.top = py + "px";
+    if(p.estrella){
+      p.estrella.style.left = (p.x*W) + "px";
+      p.estrella.style.top = (py - 26) + "px";
+      if(Math.abs(p.x - Plat.x)*W < 46 && Math.abs((p.y + 26) - Plat.y) < 40){
+        Plat.n++; $("plat-cont").textContent = Plat.n;
+        sfx.brillo(); confeti(rz.left + p.x*W, rz.top + py - 26, 12);
+        p.estrella.remove(); p.estrella = null;
+      }
+    }
+    return true;
+  });
+  Plat.heroe.style.left = (Plat.x*W) + "px";
+  Plat.heroe.style.top = (H - (Plat.y - Plat.cam)) + "px";
+  Plat.heroe.style.transform = `translate(-50%,-50%) rotate(${(Plat.xObj-Plat.x)*40}deg) scaleY(${Plat.vy>0?1.08:0.94})`;
+  requestAnimationFrame(platTick);
+}
+function endPlataformas(abandonado){
+  clearInterval(Plat.timer); Plat.timer = null;
+  const escalones = Math.max(0, Math.round(Plat.alto / PLAT_HUECO));
+  S.stats.plataformas = (S.stats.plataformas||0) + Plat.n;
+  if(!abandonado){
+    premioGrande(`🪜 ¡${escalones} pisos y ${Plat.n} estrellas!`);
+    hablar(`¡Has subido ${escalones} pisos y has cogido ${Plat.n} estrellas, ${S.nombre}! ¡Qué alto!`);
+    sfx.fanfarria(); confetiCentro(); lanzarFuegos(2);
+  }
+  guardar();
+  chequearInsignias();
+  setTimeout(()=>go(Plat.retorno), abandonado ? 0 : 1700);
+}
+
+/* ═══════════ PIZARRA MÁGICA 🎨 ═══════════
+   Sin reloj y sin puntuación: es el rato de calma. Se dibuja con el dedo, se
+   sellan bichos y se borra. No se guarda nada en ningún sitio — el dibujo vive
+   en la pantalla mientras dura, como la pizarra de clase. */
+const Dib = {ctx:null, color:"#e0508a", grosor:16, sello:null, ult:null, retorno:"s-home"};
+const DIB_COLORES = ["#e0508a","#f5a524","#facc15","#4ade80","#38bdf8","#8b6fe0","#8b5a2b","#2b2b3a"];
+const DIB_SELLOS = ["⭐","❤️","🌸","🦋","🐱","🌈"];
+function startDibujar(gratis){
+  if(limiteAlcanzado()){ despedidaLimite(); return; }
+  if(!gratis){
+    if(S.estrellas < 4){
+      hablar("¡La pizarra cuesta 4 estrellas! Juega una tanda y las consigues."); sfx.mal(); return;
+    }
+    S.estrellas -= 4; guardar(); actualizarEstrellas();
+  }
+  Dib.retorno = pantallaActual==="s-resumen" ? "s-resumen" : pantallaActual==="s-premios" ? "s-premios" : "s-home";
+  S.premioGratis = false;
+  ocultarPremiosGratis();
+  go("s-dibujar");
+  pintarPaletaDib();
+  // el lienzo se dimensiona cuando ya está en pantalla, o sale a cero
+  requestAnimationFrame(()=>{
+    const c = $("dib-lienzo");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(c.clientWidth * dpr);
+    c.height = Math.round(c.clientHeight * dpr);
+    Dib.ctx = c.getContext("2d");
+    Dib.ctx.scale(dpr, dpr);
+    Dib.ctx.lineCap = Dib.ctx.lineJoin = "round";
+    limpiarDib();
+  });
+  hablar("¡Pinta lo que quieras con el dedo! Y si te cansas, la borras y empiezas otra vez.");
+}
+function limpiarDib(){
+  const c = $("dib-lienzo");
+  if(!Dib.ctx) return;
+  Dib.ctx.fillStyle = "#fff";
+  Dib.ctx.fillRect(0, 0, c.clientWidth, c.clientHeight);
+}
+function pintarPaletaDib(){
+  const p = $("dib-paleta");
+  if(p.dataset.pintada) return;
+  p.dataset.pintada = "1";
+  const boton = (html, titulo, alPulsar)=>{
+    const b = document.createElement("button");
+    b.innerHTML = html; b.title = titulo;
+    b.setAttribute("aria-label", titulo);
+    b.style.cssText = `width:46px; height:46px; border-radius:50%; border:3px solid #fff; cursor:pointer;
+      font-size:1.3rem; line-height:1; box-shadow:0 3px 8px rgba(0,0,0,.18); background:#fff;`;
+    b.addEventListener("click", ()=>{ sfx.click(); alPulsar(b); });
+    p.appendChild(b);
+    return b;
+  };
+  const marcar = b=>{
+    [...p.children].forEach(x=>x.style.outline = "");
+    b.style.outline = "4px solid #8b6fe0";
+  };
+  DIB_COLORES.forEach(col=>{
+    const b = boton("", "Color", ()=>{ Dib.color = col; Dib.sello = null; marcar(b); });
+    b.style.background = col;
+    if(col === Dib.color) marcar(b);
+  });
+  DIB_SELLOS.forEach(s=>{
+    const b = boton(s, "Sello " + s, ()=>{ Dib.sello = s; marcar(b); });
+  });
+  boton("🧽", "Borrar con el dedo", b=>{ Dib.color = "#ffffff"; Dib.sello = null; marcar(b); });
+  boton("🗑️", "Empezar de nuevo", ()=>{ limpiarDib(); hablar("¡Hoja nueva!"); });
+}
+(function cablearDibujo(){
+  const punto = (c, e)=>{
+    const r = c.getBoundingClientRect();
+    return {x: e.clientX - r.left, y: e.clientY - r.top};
+  };
+  const arranca = e=>{
+    const c = $("dib-lienzo");
+    if(pantallaActual!=="s-dibujar" || !Dib.ctx) return;
+    e.preventDefault();
+    const p = punto(c, e);
+    if(Dib.sello){
+      Dib.ctx.font = "38px serif";
+      Dib.ctx.textAlign = "center"; Dib.ctx.textBaseline = "middle";
+      Dib.ctx.fillText(Dib.sello, p.x, p.y);
+      sfx.pop();
+      return;
+    }
+    Dib.ult = p;
+    Dib.ctx.strokeStyle = Dib.color;
+    Dib.ctx.lineWidth = Dib.color === "#ffffff" ? 34 : Dib.grosor;
+    Dib.ctx.beginPath(); Dib.ctx.moveTo(p.x, p.y); Dib.ctx.lineTo(p.x+.1, p.y); Dib.ctx.stroke();
+  };
+  const mueve = e=>{
+    if(!Dib.ult || pantallaActual!=="s-dibujar" || !Dib.ctx) return;
+    e.preventDefault();
+    const p = punto($("dib-lienzo"), e);
+    Dib.ctx.beginPath(); Dib.ctx.moveTo(Dib.ult.x, Dib.ult.y); Dib.ctx.lineTo(p.x, p.y); Dib.ctx.stroke();
+    Dib.ult = p;
+  };
+  const c = document.getElementById("dib-lienzo");
+  c.addEventListener("pointerdown", arranca);
+  c.addEventListener("pointermove", mueve);
+  addEventListener("pointerup", ()=>{ Dib.ult = null; });
+  addEventListener("pointercancel", ()=>{ Dib.ult = null; });
+})();
+function endDibujar(){
+  S.stats.dibujos = (S.stats.dibujos||0) + 1;
+  guardar();
+  go(Dib.retorno);
+}
+
 
 /* ═══════════ ZONA PAPÁ ═══════════ */
 const Papa = {pinBuf:"", pinModo:"entrar", pinTemp:"", nivel:1, tipos:new Set(["num","ami","sil"]), preview:null};
@@ -2382,6 +2899,13 @@ $("btn-salir-globos").addEventListener("click", ()=>endGlobos(true));
 $("btn-mariposas").addEventListener("click", ()=>startMariposas(false));
 $("btn-premio-mariposas").addEventListener("click", ()=>startMariposas(true));
 $("btn-salir-mariposas").addEventListener("click", ()=>endMariposas(true));
+/* los tres juegos nuevos se cablean solos desde JUEGOS: el del cofre, el de
+   premio gratis y el ✖️ de salir */
+JUEGOS.filter(j=>["naves","plataformas","dibujar"].includes(j.id)).forEach(j=>{
+  $(j.boton).addEventListener("click", ()=>j.start(false));
+  $("btn-premio-"+j.id).addEventListener("click", ()=>j.start(true));
+  $("btn-salir-"+j.id).addEventListener("click", j.fin);
+});
 $("btn-salir-juego").addEventListener("click", ()=>{
   if(salirArmado){ salirArmado = false; Tanda = null; try{ speechSynthesis.cancel(); }catch(e){} go("s-home"); }
   else { salirArmado = true; hablar("¿Quieres salir? Toca otra vez la equis"); setTimeout(()=>salirArmado=false, 2600); }
