@@ -172,10 +172,11 @@ h2{font-size:1.5rem; margin:.15em 0; text-align:center; font-weight:800;}
   font-size:1.1rem; font-weight:700; box-shadow:0 6px 18px rgba(61,54,96,.2);
   opacity:0; transform:translateY(8px); transition:all .25s;}
 #nube .burbuja.ver{opacity:1; transform:translateY(0);}
-#btn-repetir{position:fixed; right:12px; bottom:12px; z-index:50; width:64px; height:64px;
+#btn-repetir, #btn-pista{position:fixed; right:12px; bottom:12px; z-index:50; width:64px; height:64px;
   border:none; border-radius:999px; font-size:1.9rem; background:var(--oro);
   box-shadow:0 5px 0 var(--oro-osc); cursor:pointer;}
-#btn-repetir:active{transform:translateY(4px);}
+#btn-pista{bottom:86px; background:var(--lila); box-shadow:0 5px 0 var(--lila-osc);}
+#btn-repetir:active, #btn-pista:active{transform:translateY(4px);}
 
 #superpremio{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:60; pointer-events:none;}
 #superpremio .texto{font-size:2.8rem; font-weight:800; color:#fff; text-align:center; padding:24px 34px;
@@ -463,6 +464,7 @@ textarea{resize:vertical; min-height:64px;}
   <div class="tabs">
     <button class="tab activa" data-tab="nueva">✉️ Nueva misión</button>
     <button class="tab" data-tab="resultados">📊 Resultados</button>
+    <button class="tab" data-tab="estrellas">⭐ Estrellas</button>
     <button class="tab" data-tab="ajustes">🔧 Ajustes</button>
   </div>
 
@@ -517,6 +519,35 @@ textarea{resize:vertical; min-height:64px;}
     <div id="papa-resultados"></div>
   </div>
 
+  <div id="tab-estrellas" class="tarjeta oculto">
+    <p class="sub" style="text-align:left;">Las estrellas viven en su tablet. Desde aquí puedes <b>regalarle</b> estrellas por cosas del mundo real (recoger los juguetes, ayudar…) o <b>descontarlas</b> cuando canjee un premio de verdad. Nube se lo contará con su voz al abrir la app.</p>
+    <div class="form-linea">
+      <label>Cantidad</label>
+      <div class="fila" style="align-items:center; justify-content:center;">
+        <button class="btn btn-mini btn-lila" data-gd="-10">−10</button>
+        <button class="btn btn-mini btn-lila" data-gd="-5">−5</button>
+        <button class="btn btn-mini btn-lila" data-gd="-1">−1</button>
+        <div id="estrellas-delta" style="min-width:96px; text-align:center; font-size:1.5rem; font-weight:800;">+3 ⭐</div>
+        <button class="btn btn-mini btn-azul" data-gd="1">+1</button>
+        <button class="btn btn-mini btn-azul" data-gd="5">+5</button>
+        <button class="btn btn-mini btn-azul" data-gd="10">+10</button>
+      </div>
+    </div>
+    <div class="form-linea">
+      <label>Motivo (se lo dirá Nube)</label>
+      <div class="chips" id="estrellas-motivos">
+        <button class="chip-sel on" data-m="por ayudar en casa 🏡">🏡 Ayudar en casa</button>
+        <button class="chip-sel" data-m="por recoger los juguetes 🧸">🧸 Recoger juguetes</button>
+        <button class="chip-sel" data-m="por portarse genial 💖">💖 Portarse genial</button>
+        <button class="chip-sel" data-m="un regalo de papá 💝">💝 Regalo</button>
+        <button class="chip-sel" data-m="premio canjeado 🎁">🎁 Premio canjeado</button>
+      </div>
+    </div>
+    <button class="btn btn-rosa w100" id="btn-estrellas-enviar">⭐ Enviar</button>
+    <div id="estrellas-envio-ok" class="ok-msg oculto" style="margin-top:10px;"></div>
+    <p class="sub" id="estrellas-pendientes" style="font-size:.88rem;"></p>
+  </div>
+
   <div id="tab-ajustes" class="tarjeta oculto">
     <div class="form-linea">
       <label>Nombre de la niña</label>
@@ -560,6 +591,7 @@ textarea{resize:vertical; min-height:64px;}
   <div class="burbuja" id="nube-burbuja"></div>
 </div>
 <button id="btn-repetir" class="oculto" title="Repetir">🔊</button>
+<button id="btn-pista" class="oculto" title="Pista">💡</button>
 
 <div id="superpremio"><div class="texto" id="superpremio-txt">¡MUY BIEN!</div></div>
 <div id="unicornio-volador">🦄</div>
@@ -570,7 +602,7 @@ textarea{resize:vertical; min-height:64px;}
 /* ═══════════ CONFIG ═══════════ */
 const SUPA_URL  = "https://tyoavvibplxkevxkamsb.supabase.co";
 const SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5b2F2dmlicGx4a2V2eGthbXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NDA4NTAsImV4cCI6MjA5MjQxNjg1MH0.x26xzz4nV3Umtj4_4SCPu9NXQRLDEh1xZeQgGk6adrQ";
-const T_MISIONES="jim_misiones", T_RESULT="jim_resultados", T_INSIG="jim_insignias";
+const T_MISIONES="jim_misiones", T_RESULT="jim_resultados", T_INSIG="jim_insignias", T_AJUSTES="jim_ajustes";
 
 /* ═══════════ ESTADO ═══════════ */
 const LS = {
@@ -590,6 +622,9 @@ const S = {
   stats  : LS.get("stats", {misiones:0, perfectas:0, numOk:0, amiOk:0, vecOk:0, silOk:0, traOk:0, globos:0, dias:[], estrellasTotal:0}),
   cola   : LS.get("cola", []),
   hechasLocal: LS.get("hechasLocal", []),
+  // Dispositivos donde se ha entrado a la Zona papá: esos NO se apropian de las
+  // estrellas regaladas a distancia (irían al saldo del aparato equivocado).
+  esDePapa: LS.get("esDePapa", false),
   premioGratis: false
 };
 function guardar(){
@@ -597,6 +632,7 @@ function guardar(){
   LS.set("pin",S.pin); LS.set("nivelLibre",S.nivelLibre); LS.set("insig",S.insig);
   LS.set("stats",S.stats); LS.set("cola",S.cola); LS.set("hechasLocal",S.hechasLocal);
   LS.set("hoy",S.hoy); LS.set("chispa",S.chispa); LS.set("limiteMin",S.limiteMin);
+  LS.set("esDePapa",S.esDePapa);
 }
 function tocaHoy(){
   const f = new Date().toISOString().slice(0,10);
@@ -879,8 +915,9 @@ function go(id){
   window.scrollTo(0,0);
   actualizarEstrellas();
   $("btn-repetir").classList.toggle("oculto", id==="s-portada" || id==="s-papa" || id==="s-pin");
+  $("btn-pista").classList.toggle("oculto", id!=="s-juego");
   if(id==="s-home") pintarHome();
-  if(id==="s-misiones"){ pintarMisiones(); refrescarMisiones(true); }
+  if(id==="s-misiones"){ pintarMisiones(); refrescarMisiones(true); aplicarAjustes(); }
   if(id==="s-cofre") pintarCofre();
   if(id==="s-elegir") hablar("¿A qué quieres jugar, "+S.nombre+"?");
 }
@@ -2725,6 +2762,8 @@ $("pad-pin").addEventListener("pointerdown", e=>{
   e.preventDefault(); pinTecla(b.dataset.d);
 });
 async function entrarPapa(){
+  // este aparato es del adulto: que no se apropie de las estrellas regaladas
+  if(!S.esDePapa){ S.esDePapa = true; guardar(); }
   go("s-papa");
   try{ speechSynthesis.cancel(); }catch(e){}
   $("papa-envio-ok").classList.add("oculto");
@@ -2741,8 +2780,9 @@ async function entrarPapa(){
 }
 function papaTab(nombre){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("activa", t.dataset.tab===nombre));
-  ["nueva","resultados","ajustes"].forEach(t=>$("tab-"+t).classList.toggle("oculto", t!==nombre));
+  ["nueva","resultados","estrellas","ajustes"].forEach(t=>$("tab-"+t).classList.toggle("oculto", t!==nombre));
   if(nombre==="resultados") cargarResultados();
+  if(nombre==="estrellas") pintarEstrellasPendientes();
 }
 function generarPreview(){
   const tipos = [...Papa.tipos];
@@ -2959,11 +2999,107 @@ document.querySelectorAll("#ajuste-limite .nivel-btn").forEach(b=>
     document.querySelectorAll("#ajuste-limite .nivel-btn").forEach(x=>x.classList.toggle("on", x===b));
   }));
 
+/* ── pista de Nube: cómo se hace, dicho con la voz (Jimena no lee) ── */
+function pistaInfantil(ej){
+  const d = ej.d || {};
+  if(ej.t === "num") return d.sub === "serie" ? "Ve contando en voz alta despacito: el que falta es el siguiente que digas"
+    : "Cuenta tocando de uno en uno, sin saltarte ninguno";
+  if(ej.t === "sub") return "No hace falta contarlos: mira el dibujo que forman los puntos, como en un dado";
+  if(ej.t === "pal") return "Cada manojo atado son diez palillos, y los sueltos se cuentan de uno en uno";
+  if(ej.t === "ret") return "Di los números hacia atrás en voz alta, bajando como el cohete";
+  if(ej.t === "ami") return "Cuenta los que hay, y sigue contando huequitos hasta el final: esos son los amigos que faltan";
+  if(ej.t === "vec") return "El vecino de antes es uno menos, y el vecino de después es uno más";
+  if(ej.t === "fam") return "Fíjate en cómo empieza el número: esa primera parte dice su familia";
+  if(ej.t === "sil") return "Dila despacio y alargada, y fíjate con qué letra empieza";
+  if(ej.t === "tra") return "Empieza en la bolita y sigue el caminito despacio, sin levantar el dedo";
+  return "Míralo despacito, que tú puedes";
+}
+$("btn-pista").addEventListener("click", ()=>{
+  if(typeof Tanda === "undefined" || !Tanda || !Tanda.list) return;
+  const ej = Tanda.list[Tanda.idx];
+  if(!ej) return;
+  sfx.click();
+  hablar("Pista de Nube: " + pistaInfantil(ej));
+});
+
+/* ── estrellas que manda papá (tabla jim_ajustes) ── */
+const sinEmojis = t => String(t).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "").trim();
+let EstrellasDelta = 3;
+function pintarEstrellasDelta(){ const e = $("estrellas-delta"); if(e) e.textContent = (EstrellasDelta>0?"+":"")+EstrellasDelta+" ⭐"; }
+document.querySelectorAll("#tab-estrellas [data-gd]").forEach(b=>
+  b.addEventListener("click", ()=>{
+    sfx.click();
+    let v = EstrellasDelta + parseInt(b.dataset.gd,10);
+    if(v===0) v = parseInt(b.dataset.gd,10)>0 ? 1 : -1;
+    EstrellasDelta = Math.max(-100, Math.min(100, v));
+    pintarEstrellasDelta();
+  }));
+document.querySelectorAll("#estrellas-motivos .chip-sel").forEach(b=>
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll("#estrellas-motivos .chip-sel").forEach(x=>x.classList.toggle("on", x===b));
+  }));
+async function pintarEstrellasPendientes(){
+  const el = $("estrellas-pendientes"); if(!el) return;
+  const r = await sbSelect(T_AJUSTES, "select=id&estado=eq.pendiente");
+  el.textContent = (r.ok && Array.isArray(r.data) && r.data.length)
+    ? "⏳ Por entregar: "+r.data.length+". Se aplican cuando ella abre la app."
+    : "";
+}
+$("btn-estrellas-enviar").addEventListener("click", async ()=>{
+  const chip = document.querySelector("#estrellas-motivos .chip-sel.on");
+  const motivo = chip ? chip.dataset.m : "un regalo de papá 💝";
+  const b = $("btn-estrellas-enviar"); b.disabled = true;
+  const r = await enviarSeguro("insert", T_AJUSTES, {delta:EstrellasDelta, motivo});
+  b.disabled = false;
+  const ok = $("estrellas-envio-ok");
+  ok.classList.remove("oculto");
+  ok.textContent = r.ok ? "⭐ ¡Enviado! Se lo encontrará al abrir la app."
+    : (r.status===0 || r.status>=500 || r.status===429)
+      ? "📡 Guardado sin conexión: se enviará solo en cuanto haya internet."
+      : "No se pudo enviar (error "+r.status+")";
+  EstrellasDelta = 3; pintarEstrellasDelta();
+  pintarEstrellasPendientes();
+});
+/* Lado niña: cada ajuste se aplica UNA sola vez aunque haya dos dispositivos —
+   primero se marca la fila (condicionada a seguir pendiente) y solo si el
+   servidor confirma se toca el saldo. Nube lo cuenta con su voz y hay fuegos. */
+let AjustesRun = false;
+async function aplicarAjustes(){
+  if(AjustesRun) return;
+  AjustesRun = true;
+  try{
+    const r = await sbSelect(T_AJUSTES, "select=*&estado=eq.pendiente&order=created_at&limit=10");
+    if(r.ok && Array.isArray(r.data) && r.data.length){
+      let ganadas = 0, canjeadas = 0; const motivos = [];
+      for(const a of r.data){
+        const m = await sb("PATCH", T_AJUSTES+"?id=eq."+a.id+"&estado=eq.pendiente",
+          {estado:"aplicado", aplicado_at:new Date().toISOString()}, {"Prefer":"return=representation"});
+        if(!m.ok || !Array.isArray(m.data) || !m.data.length) continue; // otro dispositivo llegó antes
+        S.estrellas = Math.max(0, S.estrellas + a.delta);
+        if(a.delta > 0){ ganadas += a.delta; if(motivos.indexOf(a.motivo)<0) motivos.push(a.motivo); }
+        else canjeadas += -a.delta;
+      }
+      if(ganadas || canjeadas){
+        guardar(); actualizarEstrellas();
+        if(ganadas){
+          sfx.fanfarria(); confetiCentro(); lanzarFuegos(4);
+          hablar(`¡${S.nombre}! Papá te manda ${ganadas} estrella${ganadas===1?"":"s"}: ${sinEmojis(motivos.join(" y "))}. ¡Bien hecho!`);
+        } else {
+          hablar(`Has cambiado ${canjeadas} estrella${canjeadas===1?"":"s"} por un premio de verdad. ¡A disfrutarlo!`);
+        }
+      }
+    }
+  } finally { AjustesRun = false; }
+}
+
 /* sondeo */
 setInterval(()=>{
-  if(!document.hidden && (pantallaActual==="s-home"||pantallaActual==="s-misiones")) refrescarMisiones(true);
+  if(!document.hidden && (pantallaActual==="s-home"||pantallaActual==="s-misiones")){
+    refrescarMisiones(true);
+    if(!S.esDePapa) aplicarAjustes();
+  }
 }, 45000);
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refrescarMisiones(true); });
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ refrescarMisiones(true); if(!S.esDePapa) aplicarAjustes(); } });
 document.addEventListener("pointerdown", function una(){ audio(); document.removeEventListener("pointerdown", una); });
 if(window.speechSynthesis) speechSynthesis.getVoices();
 
@@ -2979,6 +3115,7 @@ actualizarEstrellas();
 pintarHome();
 flushCola();
 refrescarMisiones(true);
+if(!S.esDePapa) aplicarAjustes();
 </script>
 </body>
 </html>
