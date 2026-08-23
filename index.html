@@ -468,7 +468,7 @@ textarea{resize:vertical; min-height:64px;}
     <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
     <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
     <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
-    <button data-d="borrar">⌫</button><button data-d="0">0</button><span></span>
+    <button data-d="borrar">⌫</button><button data-d="0">0</button><button data-d="ok">✔️</button>
   </div>
 </section>
 
@@ -3271,34 +3271,42 @@ function endDibujar(){
 
 
 /* ═══════════ ZONA PAPÁ ═══════════ */
-const Papa = {pinBuf:"", pinModo:"entrar", pinTemp:"", nivel:1, tipos:new Set(["num","ami","sil"]), preview:null};
+const Papa = {pinBuf:"", pinModo:"entrar", pinTemp:"", pinObj:null, nivel:1, tipos:new Set(["num","ami","sil"]), preview:null};
 function abrirPin(){
   Papa.pinBuf = "";
-  if(!S.pin){ Papa.pinModo = "crear1"; $("pin-titulo").textContent = "Crea el PIN de papá"; $("pin-sub").textContent = "Elige 4 números"; }
+  Papa.pinObj = (S.pin && /^\d{4,6}$/.test(S.pin)) ? S.pin : null;
+  if(!Papa.pinObj){ Papa.pinModo = "crear1"; $("pin-titulo").textContent = "Crea el PIN de papá"; $("pin-sub").textContent = "De 4 a 6 números y ✔️"; }
   else { Papa.pinModo = "entrar"; $("pin-titulo").textContent = "Zona de papá"; $("pin-sub").textContent = "Escribe el PIN"; }
   pintarPin(); go("s-pin");
 }
+/* los puntos crecen con lo tecleado: el PIN puede tener de 4 a 6 cifras */
 function pintarPin(){
-  document.querySelectorAll("#pin-puntos .pin-punto").forEach((p,i)=>p.classList.toggle("lleno", i<Papa.pinBuf.length));
+  const c = $("pin-puntos");
+  const n = Math.max(Papa.pinModo==="entrar" && Papa.pinObj ? Papa.pinObj.length : 4, Papa.pinBuf.length);
+  c.innerHTML = "";
+  for(let i=0;i<n;i++){ const p = document.createElement("div"); p.className = "pin-punto"+(i<Papa.pinBuf.length?" lleno":""); c.appendChild(p); }
+}
+function guardarPinNuevo(v){ S.pin = v; guardar(); }
+function pinConfirmar(){
+  if(Papa.pinModo==="crear1"){
+    if(Papa.pinBuf.length<4){ $("pin-sub").textContent = "Al menos 4 números"; sfx.mal(); return; }
+    Papa.pinTemp = Papa.pinBuf; Papa.pinBuf = "";
+    Papa.pinModo = "crear2"; $("pin-sub").textContent = "Repítelo"; pintarPin();
+  } else if(Papa.pinModo==="crear2"){
+    if(Papa.pinBuf===Papa.pinTemp){ guardarPinNuevo(Papa.pinBuf); entrarPapa(); }
+    else { Papa.pinBuf=""; Papa.pinModo="crear1"; $("pin-sub").textContent="No coinciden, empieza otra vez"; pintarPin(); sfx.mal(); }
+  } else {
+    if(Papa.pinBuf===Papa.pinObj){ entrarPapa(); }
+    else { Papa.pinBuf=""; pintarPin(); $("pin-sub").textContent="PIN incorrecto"; sfx.mal(); }
+  }
 }
 function pinTecla(d){
   if(d==="borrar"){ Papa.pinBuf = Papa.pinBuf.slice(0,-1); pintarPin(); return; }
-  if(!/^\d$/.test(d) || Papa.pinBuf.length>=4) return;
+  if(d==="ok"){ pinConfirmar(); return; }
+  if(!/^\d$/.test(d) || Papa.pinBuf.length>=6) return;
   Papa.pinBuf += d; sfx.click(); pintarPin();
-  if(Papa.pinBuf.length===4){
-    setTimeout(()=>{
-      if(Papa.pinModo==="crear1"){
-        Papa.pinTemp = Papa.pinBuf; Papa.pinBuf = "";
-        Papa.pinModo = "crear2"; $("pin-sub").textContent = "Repítelo"; pintarPin();
-      } else if(Papa.pinModo==="crear2"){
-        if(Papa.pinBuf===Papa.pinTemp){ S.pin = Papa.pinBuf; guardar(); entrarPapa(); }
-        else { Papa.pinBuf=""; Papa.pinModo="crear1"; $("pin-sub").textContent="No coinciden, empieza otra vez"; pintarPin(); sfx.mal(); }
-      } else {
-        if(Papa.pinBuf===S.pin){ entrarPapa(); }
-        else { Papa.pinBuf=""; pintarPin(); $("pin-sub").textContent="PIN incorrecto"; sfx.mal(); }
-      }
-    }, 150);
-  }
+  if(Papa.pinModo==="entrar"){ if(Papa.pinBuf.length===Papa.pinObj.length) setTimeout(pinConfirmar, 150); }
+  else if(Papa.pinBuf.length===6){ setTimeout(pinConfirmar, 150); }
 }
 $("pad-pin").addEventListener("pointerdown", e=>{
   const b = e.target.closest("button"); if(!b) return;
