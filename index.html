@@ -588,6 +588,11 @@ textarea{resize:vertical; min-height:64px;}
       <button class="btn btn-mini btn-lila" id="btn-cambiar-pin">Cambiar PIN</button>
     </div>
     <div class="form-linea">
+      <label>Mudanza a PequeMisiones</label>
+      <button class="btn btn-mini btn-azul" id="btn-mudanza">🚚 Llevar a su tarjeta del portal</button>
+      <p class="sub" style="text-align:left; font-size:.85rem;">Crea un enlace que monta su tarjeta en pequemisiones.com/app con sus estrellas, su cofre y su progreso. Ábrelo en esta misma tablet.</p>
+    </div>
+    <div class="form-linea">
       <label>Límite de uso diario (cierre amable)</label>
       <div class="nivel-sel" id="ajuste-limite">
         <button class="nivel-btn on" data-lim="0">Sin límite</button>
@@ -3530,6 +3535,34 @@ $("btn-regenerar").addEventListener("click", generarPreview);
 $("btn-enviar").addEventListener("click", enviarMision);
 $("btn-res-refrescar").addEventListener("click", cargarResultados);
 $("btn-cambiar-pin").addEventListener("click", ()=>{ S.pin = null; guardar(); abrirPin(); });
+
+/* MUDANZA (23-ago-2026): esta app se muda al portal multi-familia. El enlace
+   monta la tarjeta de Jimena en pequemisiones.com/app con su mochila local
+   (estrellas, cofre, maestría…). El historial del servidor ya está copiado allí. */
+const MUDANZA_URL = "https://pequemisiones.com/app/";
+const MUDANZA_FAMILIA = "PEQUE-2018-2021";
+function enlaceMudanza(){
+  const obj = {
+    f: MUDANZA_FAMILIA,
+    p: [{ key:"jimena", alias:"Jimena", genero:"nina", curso:"inf5", tema:"unicornios",
+          modulos:["num","sub","sil","tra","cyd","ret","vec","ami","pal","fam","ing"],
+          juegos:["globos","mariposas","plataformas","naves","dibujar"] }],
+    m: { jimena: { estrellas:S.estrellas, insig:S.insig, stats:S.stats, chispa:S.chispa,
+                   nivelLibre:S.nivelLibre, limiteMin:S.limiteMin, econV2:true } },
+    pin: (S.pin && /^\d{4,6}$/.test(S.pin)) ? S.pin : undefined
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  let bin = ""; bytes.forEach(b=>{ bin += String.fromCharCode(b); });
+  return MUDANZA_URL + "#unir=" + btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+$("btn-mudanza").addEventListener("click", async ()=>{
+  const url = enlaceMudanza();
+  if(navigator.share){
+    try{ await navigator.share({title:"PequeMisiones", text:"Mudanza de Jimena al portal:", url}); return; }catch(e){ /* canceló: portapapeles */ }
+  }
+  try{ await navigator.clipboard.writeText(url); alert("Enlace copiado 📋 Ábrelo en el navegador de esta tablet."); }
+  catch(e){ prompt("Copia este enlace y ábrelo en el navegador:", url); }
+});
 $("btn-borrar-hechas").addEventListener("click", async ()=>{
   if(!confirm("¿Borrar las misiones ya hechas? (los resultados se conservan)")) return;
   await sbDelete(T_MISIONES, "estado=eq.hecha");
